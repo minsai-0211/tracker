@@ -29,7 +29,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add price_history.csv gpu_group_summary.csv
+          git add price_history_*.csv gpu_group_summary_*.csv
           git diff --staged --quiet || git commit -m "chore: 가격 수집 $(date +'%Y-%m-%d')"
           git push
         env:
