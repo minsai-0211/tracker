@@ -1,8 +1,9 @@
 """
-다나와 + 컴퓨존 가격비교 자동 수집기 v4
-- 가격비교.txt       → 다나와 URL
-- 컴퓨존_가격비교.txt → 컴퓨존 URL
-- 동일 제품을 나란히 비교해 CSV 및 Slack 리포트 출력
+다나와 + 컴퓨존 가격비교 자동 수집기 v5
+- 가격비교.txt       → 다나와 URL  (requests + BeautifulSoup)
+- 컴퓨존_가격비교.txt → 컴퓨존 URL (Playwright — JS 렌더링 대응)
+- URL 없는 항목은 빈 행으로 유지 → index 밀림 방지
+- _clean_price 하한 5만원으로 완화
 """
 
 import os
@@ -16,9 +17,10 @@ from pathlib import Path
 from datetime import date, timedelta
 from collections import defaultdict
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 # ── 설정 ────────────────────────────────────────────
-DANAWA_FILE   = Path("가격비교.txt")
+DANAWA_FILE    = Path("가격비교.txt")
 COMPUZONE_FILE = Path("컴퓨존_가격비교.txt")
 DELAY_MIN = 1.5
 DELAY_MAX = 3.5
@@ -64,11 +66,13 @@ def get_gpu_group(name: str) -> str | None:
     return None
 
 
-# ── URL 파일 파싱 (다나와 / 컴퓨존 공통) ─────────────
+# ── URL 파일 파싱 ─────────────────────────────────────
 def parse_url_file(path: Path) -> dict[str, list[dict]]:
     """
     가격비교.txt / 컴퓨존_가격비교.txt 를 읽어
-    { 카테고리: [{"name": 제품명, "subcategory": 서브카테고리, "url": url}, ...] } 반환.
+    { 카테고리: [{"name": 제품명, "subcategory": 서브카테고리, "url": url or None}, ...] } 반환.
+
+    ※ URL이 없는 줄(미확인 항목)도 url=None 으로 포함 → index 밀림 방지
     """
     categories: dict[str, list[dict]] = {}
     current = None
@@ -79,6 +83,7 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
         if not line:
             continue
 
+        # 메인 카테고리: "1. CPU" 형태
         m = re.match(r"^\d+\.\s*(.+)", line)
         if m:
             current = m.group(1).strip()
@@ -89,6 +94,7 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
         if current is None:
             continue
 
+        # URL이 있는 제품 라인
         url_match = re.search(r'(https?://\S+)', line)
         if url_match:
             url = url_match.group(1)
@@ -100,17 +106,41 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
             })
             continue
 
+        # 서브카테고리 or 미확인 항목 판별
         sub_m = re.match(r"^-\s*(.+)", line)
         if sub_m:
-            current_sub = sub_m.group(1).strip()
+            text = sub_m.group(1).strip()
+            if "미확인" in text:
+                # URL 없는 미확인 제품 → url=None 으로 보존
+                name_part = re.sub(r'\s*[-–]\s*미확인.*', '', text).strip()
+                categories[current].append({
+                    "name": name_part if name_part else None,
+                    "subcategory": current_sub,
+                    "url": None,
+                })
+            else:
+                current_sub = text
 
     return categories
 
 
-# ── 다나와 가격 파싱 ──────────────────────────────────
+# ── 공통 가격 정제 ─────────────────────────────────────
+def _clean_price(raw: str) -> int | None:
+    digits = re.sub(r"[^\d]", "", str(raw))
+    val = int(digits) if digits else None
+    # 5만원 미만 또는 1.5억 초과는 노이즈로 제외
+    if val and not (50_000 <= val <= 150_000_000):
+        return None
+    return val
+
+
+# ── 다나와 가격 파싱 (requests) ───────────────────────
 def fetch_danawa(item: dict) -> dict:
     url = item["url"]
     preset_name = item.get("name")
+
+    if not url:
+        return {"pcode": "none", "name": preset_name or "미확인", "price": None, "url": ""}
 
     pcode_m = re.search(r"pcode=(\d+)", url)
     pcode = pcode_m.group(1) if pcode_m else "unknown"
@@ -151,7 +181,7 @@ def fetch_danawa(item: dict) -> dict:
     if not price:
         for span in soup.find_all("span", class_=re.compile(r"price|lowest|miPrice", re.I)):
             candidate = _clean_price(span.get_text())
-            if candidate and 10_000 <= candidate <= 15_000_000:
+            if candidate:
                 price = candidate
                 break
 
@@ -163,26 +193,14 @@ def fetch_danawa(item: dict) -> dict:
     return {"pcode": pcode, "name": name or "이름불명", "price": price, "url": url}
 
 
-# ── 컴퓨존 가격 파싱 ──────────────────────────────────
-def fetch_compuzone(item: dict) -> dict:
-    url = item["url"]
-    preset_name = item.get("name")
-
-    pno_m = re.search(r"ProductNo=(\d+)", url)
-    product_no = pno_m.group(1) if pno_m else "unknown"
-
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-    except requests.RequestException as e:
-        log.warning(f"  [컴퓨존] 요청 실패 [ProductNo={product_no}]: {e}")
-        return {"product_no": product_no, "name": preset_name or "요청실패", "price": None, "url": url}
-
-    soup = BeautifulSoup(resp.text, "html.parser")
+# ── 컴퓨존 가격 파싱 (Playwright) ─────────────────────
+def _parse_cz_price_from_html(html: str, preset_name: str | None) -> tuple[str | None, int | None]:
+    """Playwright로 JS 렌더링된 HTML에서 제품명·가격 추출."""
+    soup = BeautifulSoup(html, "html.parser")
 
     name = preset_name
     if not name:
-        for sel in ["h1.prod_name", "h2.prod_name", "title"]:
+        for sel in ["h1.prod_name", "h2.prod_name", ".product_name", "title"]:
             tag = soup.select_one(sel)
             if tag:
                 raw = tag.get_text(" ", strip=True)
@@ -200,13 +218,32 @@ def fetch_compuzone(item: dict) -> dict:
             if price:
                 break
 
-    # 2순위: 판매가/최저가 텍스트 패턴
+    # 2순위: 컴퓨존 특화 셀렉터 (JS 렌더링 후 나타나는 태그)
+    if not price:
+        for sel in [
+            "span.sell_price",
+            "span.instant_price",
+            "em.price_num",
+            "strong.price",
+            ".price_area span",
+            ".buy_area .price",
+            "#sellPrice",
+            "#instantPrice",
+        ]:
+            tag = soup.select_one(sel)
+            if tag:
+                candidate = _clean_price(tag.get_text())
+                if candidate:
+                    price = candidate
+                    break
+
+    # 3순위: 텍스트 패턴
     if not price:
         text = soup.get_text(" ")
         for pattern in [
+            r"즉시할인가\s*([\d,]+)\s*원",
             r"판매가\s*([\d,]+)\s*원",
             r"최저가\s*([\d,]+)\s*원",
-            r"즉시할인가\s*([\d,]+)\s*원",
         ]:
             m = re.search(pattern, text)
             if m:
@@ -214,108 +251,179 @@ def fetch_compuzone(item: dict) -> dict:
                 if price:
                     break
 
-    # 3순위: 가격 관련 class 스캔
+    # 4순위: class 스캔
     if not price:
-        for span in soup.find_all(["span", "strong", "em"],
-                                   class_=re.compile(r"price|Price|sell|Sale|cost|Cost", re.I)):
-            candidate = _clean_price(span.get_text())
-            if candidate and 10_000 <= candidate <= 15_000_000:
+        for tag in soup.find_all(
+            ["span", "strong", "em", "p"],
+            class_=re.compile(r"price|sell|instant|cost", re.I)
+        ):
+            candidate = _clean_price(tag.get_text())
+            if candidate:
                 price = candidate
                 break
 
-    log.info(
-        f"  [컴퓨존] [ProductNo={product_no}] {name or '이름불명'} → {price:,}원"
-        if price else
-        f"  [컴퓨존] [ProductNo={product_no}] {name or '이름불명'} → 가격불명"
-    )
-    return {"product_no": product_no, "name": name or "이름불명", "price": price, "url": url}
+    return name, price
 
 
-def _clean_price(raw: str) -> int | None:
-    digits = re.sub(r"[^\d]", "", str(raw))
-    val = int(digits) if digits else None
-    # 단위 이상한 값 필터 (10만원 미만, 1.5억 초과는 제외)
-    if val and not (100_000 <= val <= 150_000_000):
-        return None
-    return val
+def fetch_compuzone_batch(items: list[dict]) -> dict[str, dict]:
+    """
+    Playwright 브라우저 1개로 컴퓨존 전체 제품 수집.
+    반환: { product_no: {"product_no", "name", "price", "url"} }
+    """
+    results: dict[str, dict] = {}
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent=HEADERS["User-Agent"],
+            locale="ko-KR",
+            extra_http_headers={"Accept-Language": "ko-KR,ko;q=0.9"},
+        )
+        page = context.new_page()
+        # 이미지·폰트·미디어 차단 → 속도 향상
+        page.route(
+            "**/*.{png,jpg,jpeg,gif,svg,woff,woff2,ttf,mp4,webp}",
+            lambda r: r.abort()
+        )
+
+        for item in items:
+            url = item.get("url")
+            preset_name = item.get("name")
+
+            # url=None 인 미확인 항목 → 빈 결과 저장 (고유 키 사용)
+            if not url:
+                key = f"none_{len(results)}"
+                results[key] = {
+                    "product_no": key,
+                    "name": preset_name or "미확인",
+                    "price": None,
+                    "url": "",
+                }
+                continue
+
+            pno_m = re.search(r"ProductNo=(\d+)", url)
+            product_no = pno_m.group(1) if pno_m else "unknown"
+
+            try:
+                page.goto(url, wait_until="networkidle", timeout=20_000)
+                # 가격 태그 렌더링 대기 (최대 5초)
+                try:
+                    page.wait_for_selector(
+                        "span.sell_price, span.instant_price, em.price_num, #sellPrice",
+                        timeout=5_000,
+                    )
+                except PWTimeout:
+                    pass  # 셀렉터 없어도 텍스트 패턴으로 fallback
+
+                html = page.content()
+                name, price = _parse_cz_price_from_html(html, preset_name)
+
+            except PWTimeout:
+                log.warning(f"  [컴퓨존] 페이지 타임아웃 [ProductNo={product_no}]")
+                name, price = preset_name, None
+            except Exception as e:
+                log.warning(f"  [컴퓨존] 오류 [ProductNo={product_no}]: {e}")
+                name, price = preset_name, None
+
+            log.info(
+                f"  [컴퓨존] [ProductNo={product_no}] {name or '이름불명'} → {price:,}원"
+                if price else
+                f"  [컴퓨존] [ProductNo={product_no}] {name or '이름불명'} → 가격불명"
+            )
+            results[product_no] = {
+                "product_no": product_no,
+                "name": name or "이름불명",
+                "price": price,
+                "url": url,
+            }
+            time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
+
+        browser.close()
+
+    return results
 
 
-# ── 두 소스 매칭 및 비교 행 생성 ──────────────────────
+# ── 두 소스 비교 행 생성 ──────────────────────────────
 def build_comparison_rows(
     today: str,
     cat: str,
     danawa_items: list[dict],
     cz_items: list[dict],
-    danawa_results: dict,   # pcode → fetch 결과
-    cz_results: dict,       # product_no → fetch 결과
+    danawa_results: dict,
+    cz_results: dict,
 ) -> list[dict]:
     """
-    같은 순서로 등록된 제품을 index 기반으로 1:1 매칭해 비교 행을 만든다.
-    (두 파일의 제품 순서가 동일하다고 가정)
+    두 파일의 동일 index 제품을 1:1 매칭해 비교 행 생성.
+    url=None 항목도 포함되어 있으므로 index가 정확히 맞음.
     """
     rows = []
     length = max(len(danawa_items), len(cz_items))
 
+    # cz_results는 product_no 키 → items 순서대로 정렬된 리스트 생성
+    cz_ordered: list[dict | None] = []
+    none_counter = [0]  # 미확인 항목 카운터 (리스트로 감싸 closure 공유)
+    for item in cz_items:
+        url = item.get("url") or ""
+        pno_m = re.search(r"ProductNo=(\d+)", url)
+        if pno_m:
+            pno = pno_m.group(1)
+            cz_ordered.append(cz_results.get(pno))
+        else:
+            # url=None → none_N 키로 저장된 빈 결과
+            key = f"none_{none_counter[0]}"
+            none_counter[0] += 1
+            cz_ordered.append(cz_results.get(key))
+
     for i in range(length):
         dw_item = danawa_items[i] if i < len(danawa_items) else None
-        cz_item = cz_items[i]    if i < len(cz_items)    else None
+        cz_item  = cz_items[i]    if i < len(cz_items)    else None
+        cz_res   = cz_ordered[i]  if i < len(cz_ordered)  else None
 
         dw_res = None
-        cz_res = None
         name   = None
         subcat = None
 
         if dw_item:
-            pcode  = re.search(r"pcode=(\d+)", dw_item["url"])
-            pcode  = pcode.group(1) if pcode else "unknown"
-            dw_res = danawa_results.get(pcode)
-            name   = dw_item.get("name") or (dw_res and dw_res.get("name"))
-            subcat = dw_item.get("subcategory")
+            url     = dw_item.get("url") or ""
+            pcode_m = re.search(r"pcode=(\d+)", url)
+            pcode   = pcode_m.group(1) if pcode_m else "none"
+            dw_res  = danawa_results.get(pcode)
+            name    = dw_item.get("name") or (dw_res and dw_res.get("name"))
+            subcat  = dw_item.get("subcategory")
 
-        if cz_item:
-            pno    = re.search(r"ProductNo=(\d+)", cz_item["url"])
-            pno    = pno.group(1) if pno else "unknown"
-            cz_res = cz_results.get(pno)
-            if not name:
-                name = cz_item.get("name") or (cz_res and cz_res.get("name"))
-            if not subcat:
-                subcat = cz_item.get("subcategory")
+        if not name:
+            name = (cz_item and cz_item.get("name")) or (cz_res and cz_res.get("name"))
+        if not subcat:
+            subcat = cz_item and cz_item.get("subcategory")
 
         dw_price = dw_res["price"] if dw_res else None
         cz_price = cz_res["price"] if cz_res else None
 
-        # 가격 차이 계산 (컴퓨존 - 다나와)
         price_diff = None
         cheaper    = None
         if dw_price and cz_price:
             price_diff = cz_price - dw_price
-            if price_diff < 0:
-                cheaper = "컴퓨존"
-            elif price_diff > 0:
-                cheaper = "다나와"
-            else:
-                cheaper = "동일"
+            cheaper = "컴퓨존" if price_diff < 0 else ("다나와" if price_diff > 0 else "동일")
 
         rows.append({
-            "date":           today,
-            "category":       cat,
-            "subcategory":    subcat or "",
-            "name":           name or "이름불명",
-            "danawa_price":   dw_price,
-            "danawa_url":     dw_item["url"] if dw_item else "",
+            "date":            today,
+            "category":        cat,
+            "subcategory":     subcat or "",
+            "name":            name or "이름불명",
+            "danawa_price":    dw_price,
+            "danawa_url":      (dw_item.get("url") or "") if dw_item else "",
             "compuzone_price": cz_price,
-            "compuzone_url":  cz_item["url"] if cz_item else "",
-            "price_diff":     price_diff,   # 컴퓨존 - 다나와 (음수면 컴퓨존이 저렴)
-            "cheaper":        cheaper or "",
+            "compuzone_url":   (cz_item.get("url") or "") if cz_item else "",
+            "price_diff":      price_diff,
+            "cheaper":         cheaper or "",
         })
 
     return rows
 
 
-# ── GPU 그룹 평균가 계산 (다나와 기준) ────────────────
+# ── GPU 그룹 평균가 (다나와 기준) ──────────────────────
 def calc_gpu_summary(today: str, gpu_rows: list[dict]) -> list[dict]:
     group_prices: dict[str, list[int]] = defaultdict(list)
-
     for r in gpu_rows:
         if not r["danawa_price"] or not r["name"]:
             continue
@@ -341,7 +449,7 @@ def calc_gpu_summary(today: str, gpu_rows: list[dict]) -> list[dict]:
     return summary
 
 
-# ── CSV 저장 ───────────────────────────────────────
+# ── CSV 저장 ───────────────────────────────────────────
 COMPARE_FIELDNAMES = [
     "date", "category", "subcategory", "name",
     "danawa_price", "danawa_url",
@@ -369,7 +477,7 @@ def save_gpu_summary(gpu_rows: list[dict], path: Path):
     log.info(f"GPU 그룹 요약 저장 완료: {path} ({len(gpu_rows)}행 추가)")
 
 
-# ── Slack 전송 ─────────────────────────────────────
+# ── Slack 전송 ─────────────────────────────────────────
 def send_slack_dm(message: str):
     if not SLACK_BOT_TOKEN or not SLACK_USER_ID:
         log.warning("Slack 환경변수 미설정 — 전송 생략")
@@ -387,7 +495,6 @@ def send_slack_dm(message: str):
         return
 
     channel_id = ch_data["channel"]["id"]
-
     msg_resp = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
@@ -409,7 +516,6 @@ def build_slack_message(
 ) -> str:
     lines = [f"📊 *다나와 vs 컴퓨존 가격 리포트 — {today}*", ""]
 
-    # ── 1) GPU 그룹 평균가 요약 (다나와 기준) ──────────
     lines.append("*🎮 GPU 모델군 평균가 (다나와 기준)*")
     for g in gpu_summary:
         lines.append(
@@ -418,7 +524,6 @@ def build_slack_message(
         )
     lines.append("")
 
-    # ── 2) 카테고리별 다나와 vs 컴퓨존 비교 ──────────
     cat_emoji = {"CPU": "🖥️", "RAM": "🧠", "GPU": "🎮", "SSD": "💾"}
     cat_order = ["CPU", "RAM", "GPU", "SSD"]
 
@@ -438,9 +543,8 @@ def build_slack_message(
         for sub, items in structured[cat].items():
             lines.append(f"  _{sub}_")
             for r in items:
-                dw  = f"{int(r['danawa_price']):,}원"   if r["danawa_price"]   else "미확인 ❌"
+                dw  = f"{int(r['danawa_price']):,}원"    if r["danawa_price"]    else "미확인 ❌"
                 cz  = f"{int(r['compuzone_price']):,}원" if r["compuzone_price"] else "미확인 ❌"
-
                 if r["cheaper"] == "컴퓨존":
                     diff_str = f"컴퓨존 {abs(r['price_diff']):,}원 저렴 🟢"
                 elif r["cheaper"] == "다나와":
@@ -456,7 +560,6 @@ def build_slack_message(
                 )
         lines.append("")
 
-    # ── 3) 전날 대비 가격 변동 (다나와 기준) ──────────
     if prev_rows:
         prev_map = {(r["category"], r["name"]): r for r in prev_rows}
         changes = []
@@ -472,66 +575,58 @@ def build_slack_message(
                         f"({int(prev['danawa_price']):,} → {int(r['danawa_price']):,})"
                     )
         lines.append("*📈 전날 대비 가격 변동 (다나와)*")
-        if changes:
-            lines.extend(changes)
-        else:
-            lines.append("  변동 없음")
+        lines.extend(changes) if changes else lines.append("  변동 없음")
         lines.append("")
 
-    # ── 수집 요약 ───────────────────────────────────
-    dw_ok  = sum(1 for r in all_rows if r["danawa_price"])
-    cz_ok  = sum(1 for r in all_rows if r["compuzone_price"])
-    total  = len(all_rows)
-    lines.append(
-        f"_수집: 총 {total}개 │ 다나와 성공 {dw_ok}개 │ 컴퓨존 성공 {cz_ok}개_"
-    )
+    dw_ok = sum(1 for r in all_rows if r["danawa_price"])
+    cz_ok = sum(1 for r in all_rows if r["compuzone_price"])
+    lines.append(f"_수집: 총 {len(all_rows)}개 │ 다나와 성공 {dw_ok}개 │ 컴퓨존 성공 {cz_ok}개_")
 
     return "\n".join(lines)
 
 
-# ── 메인 ──────────────────────────────────────────
+# ── 메인 ──────────────────────────────────────────────
 def main():
     today = date.today().isoformat()
     log.info(f"=== 다나와 + 컴퓨존 가격 수집 시작: {today} ===")
 
     COMPARE_CSV     = Path(f"price_comparison_{today}.csv")
     GPU_SUMMARY_CSV = Path(f"gpu_group_summary_{today}.csv")
-    log.info(f"저장 파일: {COMPARE_CSV} / {GPU_SUMMARY_CSV}")
 
     if not DANAWA_FILE.exists():
         raise FileNotFoundError(f"{DANAWA_FILE} 파일을 찾을 수 없습니다.")
     if not COMPUZONE_FILE.exists():
         raise FileNotFoundError(f"{COMPUZONE_FILE} 파일을 찾을 수 없습니다.")
 
-    danawa_cats   = parse_url_file(DANAWA_FILE)
+    danawa_cats    = parse_url_file(DANAWA_FILE)
     compuzone_cats = parse_url_file(COMPUZONE_FILE)
 
-    # ── 다나와 수집 ──
+    # ── 다나와 수집 (requests) ──
     log.info("\n=== [1/2] 다나와 수집 시작 ===")
-    danawa_results: dict[str, dict] = {}   # pcode → result
+    danawa_results: dict[str, dict] = {}
     for cat, items in danawa_cats.items():
         log.info(f"\n[다나와/{cat}] {len(items)}개 처리 중...")
         for item in items:
             res = fetch_danawa(item)
             danawa_results[res["pcode"]] = res
-            time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
+            if item.get("url"):
+                time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
 
-    # ── 컴퓨존 수집 ──
-    log.info("\n=== [2/2] 컴퓨존 수집 시작 ===")
-    cz_results: dict[str, dict] = {}       # product_no → result
+    # ── 컴퓨존 수집 (Playwright — 브라우저 1개로 전체 처리) ──
+    log.info("\n=== [2/2] 컴퓨존 수집 시작 (Playwright) ===")
+    all_cz_items = []
     for cat, items in compuzone_cats.items():
-        log.info(f"\n[컴퓨존/{cat}] {len(items)}개 처리 중...")
         for item in items:
-            res = fetch_compuzone(item)
-            cz_results[res["product_no"]] = res
-            time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
+            all_cz_items.append({**item, "_cat": cat})
+
+    cz_results = fetch_compuzone_batch(all_cz_items)
 
     # ── 비교 행 생성 ──
     log.info("\n=== 가격 비교 매칭 ===")
     all_rows: list[dict] = []
     gpu_rows: list[dict] = []
 
-    all_cats = sorted(set(list(danawa_cats.keys()) + list(compuzone_cats.keys())))
+    all_cats = list(dict.fromkeys(list(danawa_cats.keys()) + list(compuzone_cats.keys())))
     for cat in all_cats:
         dw_items = danawa_cats.get(cat, [])
         cz_items = compuzone_cats.get(cat, [])
@@ -540,7 +635,6 @@ def main():
         if cat == "GPU":
             gpu_rows.extend(rows)
 
-    # ── CSV 저장 ──
     save_comparison_csv(all_rows, COMPARE_CSV)
 
     gpu_summary = []
@@ -549,7 +643,6 @@ def main():
         gpu_summary = calc_gpu_summary(today, gpu_rows)
         save_gpu_summary(gpu_summary, GPU_SUMMARY_CSV)
 
-    # ── 전날 데이터 로드 ──
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     prev_csv  = Path(f"price_comparison_{yesterday}.csv")
     prev_rows = None
@@ -560,7 +653,6 @@ def main():
     else:
         log.info("전날 CSV 없음 — 변동 비교 생략")
 
-    # ── Slack 리포트 ──
     log.info("\n=== Slack 리포트 전송 ===")
     message = build_slack_message(today, all_rows, gpu_summary, prev_rows)
     send_slack_dm(message)
