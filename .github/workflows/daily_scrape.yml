@@ -2,20 +2,42 @@ name: 다나와 가격 자동 수집
 
 on:
   schedule:
-    # 매일 오전 9시 (KST) 실행 — GitHub Actions는 UTC 기준이라 00:00 UTC = 09:00 KST
+    # 매일 오전 9시 (KST) — UTC 00:00
     - cron: "0 0 * * *"
-  workflow_dispatch:   # 수동 실행 버튼도 유지
+  workflow_dispatch:
 
 jobs:
-  scrape:
+
+  # ── Job 1: 다나와 수집 (requests, 약 4분) ──────────────
+  danawa:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 저장소 체크아웃
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Python 3.11 설치
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 다나와 수집 실행
+        run: python scraper_danawa.py
+
+      - name: CSV 업로드 (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: danawa-csv
+          path: danawa_*.csv
+          retention-days: 2
+
+  # ── Job 2: 컴퓨존 수집 (Playwright, 약 8~10분) ─────────
+  compuzone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -25,8 +47,48 @@ jobs:
       - name: Playwright 브라우저 설치
         run: playwright install chromium --with-deps
 
-      - name: 가격 수집 실행
-        run: python scraper.py
+      - name: 컴퓨존 수집 실행
+        run: python scraper_compuzone.py
+
+      - name: CSV 업로드 (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: compuzone-csv
+          path: compuzone_*.csv
+          retention-days: 2
+
+  # ── Job 3: 비교 + Slack 리포트 (Job 1, 2 완료 후) ──────
+  compare:
+    runs-on: ubuntu-latest
+    needs: [danawa, compuzone]   # 두 job 모두 끝나야 실행
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 다나와 CSV 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: danawa-csv
+
+      - name: 컴퓨존 CSV 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: compuzone-csv
+
+      - name: 전날 비교 CSV 복원 (있을 경우)
+        run: |
+          git fetch origin
+          YESTERDAY=$(date -d 'yesterday' +'%Y-%m-%d')
+          git show origin/main:price_comparison_${YESTERDAY}.csv > price_comparison_${YESTERDAY}.csv 2>/dev/null || true
+
+      - name: 비교 & Slack 리포트
+        run: python scraper_compare.py
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
@@ -35,7 +97,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add price_comparison_*.csv gpu_group_summary_*.csv
+          git add danawa_*.csv compuzone_*.csv price_comparison_*.csv gpu_group_summary_*.csv
           git diff --staged --quiet || git commit -m "chore: 가격 수집 $(date +'%Y-%m-%d')"
           git push
         env:
