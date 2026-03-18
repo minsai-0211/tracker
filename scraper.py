@@ -14,7 +14,7 @@ import random
 import logging
 import requests
 from pathlib import Path
-from datetime import date
+from datetime import date, timedelta
 from collections import defaultdict
 from bs4 import BeautifulSoup
 
@@ -358,7 +358,6 @@ def main():
         save_gpu_summary(gpu_summary, GPU_SUMMARY_CSV)
 
     # 전날 CSV 로드 (가격 변동 비교용)
-    from datetime import date, timedelta
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     prev_csv  = Path(f"price_history_{yesterday}.csv")
     prev_rows = None
