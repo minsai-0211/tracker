@@ -22,6 +22,9 @@ jobs:
       - name: 패키지 설치
         run: pip install -r requirements.txt
 
+      - name: Playwright 브라우저 설치
+        run: playwright install chromium --with-deps
+
       - name: 가격 수집 실행
         run: python scraper.py
         env:
@@ -32,7 +35,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add price_history_*.csv gpu_group_summary_*.csv
+          git add price_comparison_*.csv gpu_group_summary_*.csv
           git diff --staged --quiet || git commit -m "chore: 가격 수집 $(date +'%Y-%m-%d')"
           git push
         env:
