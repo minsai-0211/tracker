@@ -24,6 +24,9 @@ jobs:
 
       - name: 가격 수집 실행
         run: python scraper.py
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
 
       - name: 결과 CSV 커밋 & 푸시
         run: |
