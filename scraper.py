@@ -69,29 +69,51 @@ def get_gpu_group(name: str) -> str | None:
 
 # ── URL 파일 파싱 ─────────────────────────────────────
 def parse_url_file(path: Path) -> dict[str, list[dict]]:
+    """
+    가격비교.txt 를 읽어
+    { 카테고리: [{"name": 제품명, "subcategory": 서브카테고리, "url": url}, ...] } 반환.
+
+    지원 형식:
+      1. CPU                          → 메인 카테고리
+      - 게이밍 & 작업용 (AMD)         → 서브카테고리 (- 로 시작, URL 없는 줄)
+      AMD 라이젠9 ... - https://...   → 제품
+    """
     categories: dict[str, list[dict]] = {}
     current = None
+    current_sub = None
 
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
             continue
 
+        # 메인 카테고리: "1. CPU" 형태
         m = re.match(r"^\d+\.\s*(.+)", line)
         if m:
             current = m.group(1).strip()
+            current_sub = None
             categories[current] = []
             continue
 
         if current is None:
             continue
 
-        # URL 위치를 직접 찾아서 제품명과 분리
+        # URL이 있으면 제품 라인
         url_match = re.search(r'(https?://\S+)', line)
         if url_match:
             url = url_match.group(1)
             name_part = line[:url_match.start()].strip().rstrip('-').strip()
-            categories[current].append({"name": name_part if name_part else None, "url": url})
+            categories[current].append({
+                "name": name_part if name_part else None,
+                "subcategory": current_sub,
+                "url": url,
+            })
+            continue
+
+        # URL 없고 "- 서브카테고리명" 형태면 서브카테고리
+        sub_m = re.match(r"^-\s*(.+)", line)
+        if sub_m:
+            current_sub = sub_m.group(1).strip()
 
     return categories
 
@@ -158,7 +180,7 @@ def _clean_price(raw: str) -> int | None:
 
 
 # ── CSV 저장 ───────────────────────────────────────
-FIELDNAMES     = ["date", "category", "pcode", "name", "price", "url"]
+FIELDNAMES     = ["date", "category", "subcategory", "pcode", "name", "price", "url"]
 GPU_FIELDNAMES = ["date", "gpu_group", "count", "avg_price", "min_price", "max_price"]
 
 def save_to_csv(rows: list[dict], path: Path):
@@ -267,18 +289,34 @@ def build_slack_message(
         )
     lines.append("")
 
-    # ── 2) 카테고리별 전체 제품 가격 리스트 ───────────
-    by_cat: dict[str, list[dict]] = defaultdict(list)
-    for r in all_rows:
-        by_cat[r["category"]].append(r)
-
+    # ── 2) 카테고리 > 서브카테고리별 제품 가격 리스트 ───
+    # 카테고리 순서 및 이모지
     cat_emoji = {"CPU": "🖥️", "RAM": "🧠", "GPU": "🎮", "SSD": "💾"}
-    for cat, items in by_cat.items():
+    cat_order = ["CPU", "RAM", "GPU", "SSD"]
+
+    # all_rows를 category → subcategory → rows 구조로 재구성
+    structured: dict[str, dict[str, list[dict]]] = {}
+    for cat in cat_order:
+        structured[cat] = {}
+    for r in all_rows:
+        cat = r["category"]
+        sub = r.get("subcategory") or "기타"
+        if cat not in structured:
+            structured[cat] = {}
+        if sub not in structured[cat]:
+            structured[cat][sub] = []
+        structured[cat][sub].append(r)
+
+    for cat in cat_order:
+        if not structured.get(cat):
+            continue
         emoji = cat_emoji.get(cat, "📦")
-        lines.append(f"*{emoji} {cat} 최저가*")
-        for r in items:
-            price_str = f"{int(r['price']):,}원" if r["price"] else "가격불명 ❌"
-            lines.append(f"  • {r['name'][:35]:<35s} │ {price_str}")
+        lines.append(f"*{emoji} {cat}*")
+        for sub, items in structured[cat].items():
+            lines.append(f"  _{sub}_")
+            for r in items:
+                price_str = f"{int(r['price']):,}원" if r["price"] else "가격불명 ❌"
+                lines.append(f"    • {r['name'][:33]:<33s} │ {price_str}")
         lines.append("")
 
     # ── 3) 전날 대비 가격 변동 ─────────────────────
@@ -336,12 +374,13 @@ def main():
         for item in items:
             product = fetch_product(item)
             row = {
-                "date":     today,
-                "category": cat,
-                "pcode":    product["pcode"],
-                "name":     product["name"],
-                "price":    product["price"],
-                "url":      product["url"],
+                "date":        today,
+                "category":    cat,
+                "subcategory": item.get("subcategory") or "",
+                "pcode":       product["pcode"],
+                "name":        product["name"],
+                "price":       product["price"],
+                "url":         product["url"],
             }
             all_rows.append(row)
             if cat == "GPU":
