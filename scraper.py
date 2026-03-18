@@ -1,9 +1,8 @@
 """
-다나와 가격비교 자동 수집기 v3
-- 가격비교.txt 의 URL을 읽어 각 제품 최저가를 수집
-- GPU는 모델군별 평균가로 묶어서 별도 CSV에도 저장
-- 결과를 CSV에 날짜별로 누적 저장
-- 수집 완료 후 Slack DM으로 리포트 전송
+다나와 + 컴퓨존 가격비교 자동 수집기 v4
+- 가격비교.txt       → 다나와 URL
+- 컴퓨존_가격비교.txt → 컴퓨존 URL
+- 동일 제품을 나란히 비교해 CSV 및 Slack 리포트 출력
 """
 
 import os
@@ -19,15 +18,13 @@ from collections import defaultdict
 from bs4 import BeautifulSoup
 
 # ── 설정 ────────────────────────────────────────────
-URL_FILE  = Path("가격비교.txt")   # URL 목록 파일
+DANAWA_FILE   = Path("가격비교.txt")
+COMPUZONE_FILE = Path("컴퓨존_가격비교.txt")
 DELAY_MIN = 1.5
 DELAY_MAX = 3.5
-# CSV 파일명은 실행 시점 날짜로 동적 생성
-# 예: price_history_2026-03-18.csv / gpu_group_summary_2026-03-18.csv
 
-# Slack 설정 — GitHub Actions Secret 에서 주입
-SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")   # xoxb-...
-SLACK_USER_ID   = os.environ.get("SLACK_USER_ID", "")     # U012AB3CD (본인 Slack User ID)
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
+SLACK_USER_ID   = os.environ.get("SLACK_USER_ID", "")
 # ────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -67,16 +64,11 @@ def get_gpu_group(name: str) -> str | None:
     return None
 
 
-# ── URL 파일 파싱 ─────────────────────────────────────
+# ── URL 파일 파싱 (다나와 / 컴퓨존 공통) ─────────────
 def parse_url_file(path: Path) -> dict[str, list[dict]]:
     """
-    가격비교.txt 를 읽어
+    가격비교.txt / 컴퓨존_가격비교.txt 를 읽어
     { 카테고리: [{"name": 제품명, "subcategory": 서브카테고리, "url": url}, ...] } 반환.
-
-    지원 형식:
-      1. CPU                          → 메인 카테고리
-      - 게이밍 & 작업용 (AMD)         → 서브카테고리 (- 로 시작, URL 없는 줄)
-      AMD 라이젠9 ... - https://...   → 제품
     """
     categories: dict[str, list[dict]] = {}
     current = None
@@ -87,7 +79,6 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
         if not line:
             continue
 
-        # 메인 카테고리: "1. CPU" 형태
         m = re.match(r"^\d+\.\s*(.+)", line)
         if m:
             current = m.group(1).strip()
@@ -98,7 +89,6 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
         if current is None:
             continue
 
-        # URL이 있으면 제품 라인
         url_match = re.search(r'(https?://\S+)', line)
         if url_match:
             url = url_match.group(1)
@@ -110,7 +100,6 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
             })
             continue
 
-        # URL 없고 "- 서브카테고리명" 형태면 서브카테고리
         sub_m = re.match(r"^-\s*(.+)", line)
         if sub_m:
             current_sub = sub_m.group(1).strip()
@@ -118,8 +107,8 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
     return categories
 
 
-# ── 다나와 페이지에서 제품명 + 최저가 파싱 ──────────────
-def fetch_product(item: dict) -> dict:
+# ── 다나와 가격 파싱 ──────────────────────────────────
+def fetch_danawa(item: dict) -> dict:
     url = item["url"]
     preset_name = item.get("name")
 
@@ -130,7 +119,7 @@ def fetch_product(item: dict) -> dict:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
     except requests.RequestException as e:
-        log.warning(f"  요청 실패 [{pcode}]: {e}")
+        log.warning(f"  [다나와] 요청 실패 [{pcode}]: {e}")
         return {"pcode": pcode, "name": preset_name or "요청실패", "price": None, "url": url}
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -167,53 +156,174 @@ def fetch_product(item: dict) -> dict:
                 break
 
     log.info(
-        f"  [{pcode}] {name or '이름불명'} → {price:,}원"
+        f"  [다나와] [{pcode}] {name or '이름불명'} → {price:,}원"
         if price else
-        f"  [{pcode}] {name or '이름불명'} → 가격불명"
+        f"  [다나와] [{pcode}] {name or '이름불명'} → 가격불명"
     )
     return {"pcode": pcode, "name": name or "이름불명", "price": price, "url": url}
 
 
+# ── 컴퓨존 가격 파싱 ──────────────────────────────────
+def fetch_compuzone(item: dict) -> dict:
+    url = item["url"]
+    preset_name = item.get("name")
+
+    pno_m = re.search(r"ProductNo=(\d+)", url)
+    product_no = pno_m.group(1) if pno_m else "unknown"
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        log.warning(f"  [컴퓨존] 요청 실패 [ProductNo={product_no}]: {e}")
+        return {"product_no": product_no, "name": preset_name or "요청실패", "price": None, "url": url}
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    name = preset_name
+    if not name:
+        for sel in ["h1.prod_name", "h2.prod_name", "title"]:
+            tag = soup.select_one(sel)
+            if tag:
+                raw = tag.get_text(" ", strip=True)
+                raw = re.sub(r"\s*:\s*컴퓨존.*", "", raw)
+                name = raw.strip()
+                break
+
+    price = None
+
+    # 1순위: 메타태그
+    for meta_prop in ["product:price:amount", "og:price:amount"]:
+        meta = soup.find("meta", property=meta_prop)
+        if meta and meta.get("content"):
+            price = _clean_price(meta["content"])
+            if price:
+                break
+
+    # 2순위: 판매가/최저가 텍스트 패턴
+    if not price:
+        text = soup.get_text(" ")
+        for pattern in [
+            r"판매가\s*([\d,]+)\s*원",
+            r"최저가\s*([\d,]+)\s*원",
+            r"즉시할인가\s*([\d,]+)\s*원",
+        ]:
+            m = re.search(pattern, text)
+            if m:
+                price = _clean_price(m.group(1))
+                if price:
+                    break
+
+    # 3순위: 가격 관련 class 스캔
+    if not price:
+        for span in soup.find_all(["span", "strong", "em"],
+                                   class_=re.compile(r"price|Price|sell|Sale|cost|Cost", re.I)):
+            candidate = _clean_price(span.get_text())
+            if candidate and 10_000 <= candidate <= 15_000_000:
+                price = candidate
+                break
+
+    log.info(
+        f"  [컴퓨존] [ProductNo={product_no}] {name or '이름불명'} → {price:,}원"
+        if price else
+        f"  [컴퓨존] [ProductNo={product_no}] {name or '이름불명'} → 가격불명"
+    )
+    return {"product_no": product_no, "name": name or "이름불명", "price": price, "url": url}
+
+
 def _clean_price(raw: str) -> int | None:
     digits = re.sub(r"[^\d]", "", str(raw))
-    return int(digits) if digits else None
+    val = int(digits) if digits else None
+    # 단위 이상한 값 필터 (10만원 미만, 1.5억 초과는 제외)
+    if val and not (100_000 <= val <= 150_000_000):
+        return None
+    return val
 
 
-# ── CSV 저장 ───────────────────────────────────────
-FIELDNAMES     = ["date", "category", "subcategory", "pcode", "name", "price", "url"]
-GPU_FIELDNAMES = ["date", "gpu_group", "count", "avg_price", "min_price", "max_price"]
+# ── 두 소스 매칭 및 비교 행 생성 ──────────────────────
+def build_comparison_rows(
+    today: str,
+    cat: str,
+    danawa_items: list[dict],
+    cz_items: list[dict],
+    danawa_results: dict,   # pcode → fetch 결과
+    cz_results: dict,       # product_no → fetch 결과
+) -> list[dict]:
+    """
+    같은 순서로 등록된 제품을 index 기반으로 1:1 매칭해 비교 행을 만든다.
+    (두 파일의 제품 순서가 동일하다고 가정)
+    """
+    rows = []
+    length = max(len(danawa_items), len(cz_items))
 
-def save_to_csv(rows: list[dict], path: Path):
-    write_header = not path.exists()
-    with path.open("a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        if write_header:
-            writer.writeheader()
-        writer.writerows(rows)
-    log.info(f"CSV 저장 완료: {path} ({len(rows)}행 추가)")
+    for i in range(length):
+        dw_item = danawa_items[i] if i < len(danawa_items) else None
+        cz_item = cz_items[i]    if i < len(cz_items)    else None
 
-def save_gpu_summary(gpu_rows: list[dict], path: Path):
-    write_header = not path.exists()
-    with path.open("a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=GPU_FIELDNAMES)
-        if write_header:
-            writer.writeheader()
-        writer.writerows(gpu_rows)
-    log.info(f"GPU 그룹 요약 저장 완료: {path} ({len(gpu_rows)}행 추가)")
+        dw_res = None
+        cz_res = None
+        name   = None
+        subcat = None
+
+        if dw_item:
+            pcode  = re.search(r"pcode=(\d+)", dw_item["url"])
+            pcode  = pcode.group(1) if pcode else "unknown"
+            dw_res = danawa_results.get(pcode)
+            name   = dw_item.get("name") or (dw_res and dw_res.get("name"))
+            subcat = dw_item.get("subcategory")
+
+        if cz_item:
+            pno    = re.search(r"ProductNo=(\d+)", cz_item["url"])
+            pno    = pno.group(1) if pno else "unknown"
+            cz_res = cz_results.get(pno)
+            if not name:
+                name = cz_item.get("name") or (cz_res and cz_res.get("name"))
+            if not subcat:
+                subcat = cz_item.get("subcategory")
+
+        dw_price = dw_res["price"] if dw_res else None
+        cz_price = cz_res["price"] if cz_res else None
+
+        # 가격 차이 계산 (컴퓨존 - 다나와)
+        price_diff = None
+        cheaper    = None
+        if dw_price and cz_price:
+            price_diff = cz_price - dw_price
+            if price_diff < 0:
+                cheaper = "컴퓨존"
+            elif price_diff > 0:
+                cheaper = "다나와"
+            else:
+                cheaper = "동일"
+
+        rows.append({
+            "date":           today,
+            "category":       cat,
+            "subcategory":    subcat or "",
+            "name":           name or "이름불명",
+            "danawa_price":   dw_price,
+            "danawa_url":     dw_item["url"] if dw_item else "",
+            "compuzone_price": cz_price,
+            "compuzone_url":  cz_item["url"] if cz_item else "",
+            "price_diff":     price_diff,   # 컴퓨존 - 다나와 (음수면 컴퓨존이 저렴)
+            "cheaper":        cheaper or "",
+        })
+
+    return rows
 
 
-# ── GPU 그룹 평균가 계산 ───────────────────────────
-def calc_gpu_summary(today: str, gpu_products: list[dict]) -> list[dict]:
+# ── GPU 그룹 평균가 계산 (다나와 기준) ────────────────
+def calc_gpu_summary(today: str, gpu_rows: list[dict]) -> list[dict]:
     group_prices: dict[str, list[int]] = defaultdict(list)
 
-    for p in gpu_products:
-        if not p["price"] or not p["name"]:
+    for r in gpu_rows:
+        if not r["danawa_price"] or not r["name"]:
             continue
-        group = get_gpu_group(p["name"])
+        group = get_gpu_group(r["name"])
         if group:
-            group_prices[group].append(p["price"])
+            group_prices[group].append(r["danawa_price"])
         else:
-            log.warning(f"  GPU 그룹 미분류: {p['name']}")
+            log.warning(f"  GPU 그룹 미분류: {r['name']}")
 
     summary = []
     for group_name, _ in GPU_GROUPS:
@@ -231,14 +341,40 @@ def calc_gpu_summary(today: str, gpu_products: list[dict]) -> list[dict]:
     return summary
 
 
+# ── CSV 저장 ───────────────────────────────────────
+COMPARE_FIELDNAMES = [
+    "date", "category", "subcategory", "name",
+    "danawa_price", "danawa_url",
+    "compuzone_price", "compuzone_url",
+    "price_diff", "cheaper",
+]
+GPU_FIELDNAMES = ["date", "gpu_group", "count", "avg_price", "min_price", "max_price"]
+
+def save_comparison_csv(rows: list[dict], path: Path):
+    write_header = not path.exists()
+    with path.open("a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=COMPARE_FIELDNAMES)
+        if write_header:
+            writer.writeheader()
+        writer.writerows(rows)
+    log.info(f"비교 CSV 저장 완료: {path} ({len(rows)}행 추가)")
+
+def save_gpu_summary(gpu_rows: list[dict], path: Path):
+    write_header = not path.exists()
+    with path.open("a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=GPU_FIELDNAMES)
+        if write_header:
+            writer.writeheader()
+        writer.writerows(gpu_rows)
+    log.info(f"GPU 그룹 요약 저장 완료: {path} ({len(gpu_rows)}행 추가)")
+
+
 # ── Slack 전송 ─────────────────────────────────────
 def send_slack_dm(message: str):
-    """SLACK_BOT_TOKEN + SLACK_USER_ID 로 DM 전송."""
     if not SLACK_BOT_TOKEN or not SLACK_USER_ID:
         log.warning("Slack 환경변수 미설정 — 전송 생략")
         return
 
-    # 1) DM 채널 열기
     ch_resp = requests.post(
         "https://slack.com/api/conversations.open",
         headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
@@ -252,7 +388,6 @@ def send_slack_dm(message: str):
 
     channel_id = ch_data["channel"]["id"]
 
-    # 2) 메시지 전송
     msg_resp = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
@@ -272,16 +407,10 @@ def build_slack_message(
     gpu_summary: list[dict],
     prev_rows: list[dict] | None = None,
 ) -> str:
-    """
-    Slack에 보낼 리포트 메시지 생성.
-    - GPU 그룹 평균가 요약
-    - 카테고리별 전체 제품 가격 리스트
-    - 전날 대비 가격 변동 (prev_rows 있을 때)
-    """
-    lines = [f"📊 *다나와 가격 리포트 — {today}*", ""]
+    lines = [f"📊 *다나와 vs 컴퓨존 가격 리포트 — {today}*", ""]
 
-    # ── 1) GPU 그룹 평균가 요약 ─────────────────────
-    lines.append("*🎮 GPU 모델군 평균가*")
+    # ── 1) GPU 그룹 평균가 요약 (다나와 기준) ──────────
+    lines.append("*🎮 GPU 모델군 평균가 (다나와 기준)*")
     for g in gpu_summary:
         lines.append(
             f"  • {g['gpu_group']:12s} │ 평균 {g['avg_price']:>10,}원 "
@@ -289,23 +418,17 @@ def build_slack_message(
         )
     lines.append("")
 
-    # ── 2) 카테고리 > 서브카테고리별 제품 가격 리스트 ───
-    # 카테고리 순서 및 이모지
+    # ── 2) 카테고리별 다나와 vs 컴퓨존 비교 ──────────
     cat_emoji = {"CPU": "🖥️", "RAM": "🧠", "GPU": "🎮", "SSD": "💾"}
     cat_order = ["CPU", "RAM", "GPU", "SSD"]
 
-    # all_rows를 category → subcategory → rows 구조로 재구성
-    structured: dict[str, dict[str, list[dict]]] = {}
-    for cat in cat_order:
-        structured[cat] = {}
+    structured: dict[str, dict[str, list[dict]]] = {c: {} for c in cat_order}
     for r in all_rows:
         cat = r["category"]
         sub = r.get("subcategory") or "기타"
         if cat not in structured:
             structured[cat] = {}
-        if sub not in structured[cat]:
-            structured[cat][sub] = []
-        structured[cat][sub].append(r)
+        structured[cat].setdefault(sub, []).append(r)
 
     for cat in cat_order:
         if not structured.get(cat):
@@ -315,37 +438,53 @@ def build_slack_message(
         for sub, items in structured[cat].items():
             lines.append(f"  _{sub}_")
             for r in items:
-                price_str = f"{int(r['price']):,}원" if r["price"] else "가격불명 ❌"
-                lines.append(f"    • {r['name'][:33]:<33s} │ {price_str}")
+                dw  = f"{int(r['danawa_price']):,}원"   if r["danawa_price"]   else "미확인 ❌"
+                cz  = f"{int(r['compuzone_price']):,}원" if r["compuzone_price"] else "미확인 ❌"
+
+                if r["cheaper"] == "컴퓨존":
+                    diff_str = f"컴퓨존 {abs(r['price_diff']):,}원 저렴 🟢"
+                elif r["cheaper"] == "다나와":
+                    diff_str = f"다나와 {abs(r['price_diff']):,}원 저렴 🔵"
+                elif r["cheaper"] == "동일":
+                    diff_str = "동일가 ⚪"
+                else:
+                    diff_str = "비교불가"
+
+                name_str = r["name"][:28]
+                lines.append(
+                    f"    • {name_str:<28s} │ 다나와 {dw:>12s} │ 컴퓨존 {cz:>12s} │ {diff_str}"
+                )
         lines.append("")
 
-    # ── 3) 전날 대비 가격 변동 ─────────────────────
+    # ── 3) 전날 대비 가격 변동 (다나와 기준) ──────────
     if prev_rows:
-        prev_map = {r["pcode"]: r for r in prev_rows}
+        prev_map = {(r["category"], r["name"]): r for r in prev_rows}
         changes = []
         for r in all_rows:
-            prev = prev_map.get(r["pcode"])
-            if prev and r["price"] and prev.get("price"):
-                diff = int(r["price"]) - int(prev["price"])
+            key = (r["category"], r["name"])
+            prev = prev_map.get(key)
+            if prev and r["danawa_price"] and prev.get("danawa_price"):
+                diff = int(r["danawa_price"]) - int(prev["danawa_price"])
                 if diff != 0:
                     arrow = "🔺" if diff > 0 else "🔻"
                     changes.append(
-                        f"  {arrow} {r['name'][:30]} │ {diff:+,}원 "
-                        f"({int(prev['price']):,} → {int(r['price']):,})"
+                        f"  {arrow} {r['name'][:28]} │ {diff:+,}원 "
+                        f"({int(prev['danawa_price']):,} → {int(r['danawa_price']):,})"
                     )
+        lines.append("*📈 전날 대비 가격 변동 (다나와)*")
         if changes:
-            lines.append("*📈 전날 대비 가격 변동*")
             lines.extend(changes)
-            lines.append("")
         else:
-            lines.append("*📈 전날 대비 가격 변동*")
             lines.append("  변동 없음")
-            lines.append("")
+        lines.append("")
 
     # ── 수집 요약 ───────────────────────────────────
-    success = sum(1 for r in all_rows if r["price"])
-    fail    = len(all_rows) - success
-    lines.append(f"_수집: 총 {len(all_rows)}개 │ 성공 {success}개 │ 실패 {fail}개_")
+    dw_ok  = sum(1 for r in all_rows if r["danawa_price"])
+    cz_ok  = sum(1 for r in all_rows if r["compuzone_price"])
+    total  = len(all_rows)
+    lines.append(
+        f"_수집: 총 {total}개 │ 다나와 성공 {dw_ok}개 │ 컴퓨존 성공 {cz_ok}개_"
+    )
 
     return "\n".join(lines)
 
@@ -353,52 +492,66 @@ def build_slack_message(
 # ── 메인 ──────────────────────────────────────────
 def main():
     today = date.today().isoformat()
-    log.info(f"=== 다나와 가격 수집 시작: {today} ===")
+    log.info(f"=== 다나와 + 컴퓨존 가격 수집 시작: {today} ===")
 
-    OUTPUT_CSV      = Path(f"price_history_{today}.csv")
+    COMPARE_CSV     = Path(f"price_comparison_{today}.csv")
     GPU_SUMMARY_CSV = Path(f"gpu_group_summary_{today}.csv")
-    log.info(f"저장 파일: {OUTPUT_CSV} / {GPU_SUMMARY_CSV}")
+    log.info(f"저장 파일: {COMPARE_CSV} / {GPU_SUMMARY_CSV}")
 
-    if not URL_FILE.exists():
-        raise FileNotFoundError(f"{URL_FILE} 파일을 찾을 수 없습니다.")
+    if not DANAWA_FILE.exists():
+        raise FileNotFoundError(f"{DANAWA_FILE} 파일을 찾을 수 없습니다.")
+    if not COMPUZONE_FILE.exists():
+        raise FileNotFoundError(f"{COMPUZONE_FILE} 파일을 찾을 수 없습니다.")
 
-    categories = parse_url_file(URL_FILE)
-    total_urls = sum(len(v) for v in categories.values())
-    log.info(f"카테고리 {len(categories)}개, 총 URL {total_urls}개 수집 예정")
+    danawa_cats   = parse_url_file(DANAWA_FILE)
+    compuzone_cats = parse_url_file(COMPUZONE_FILE)
 
-    all_rows = []
-    gpu_products = []
-
-    for cat, items in categories.items():
-        log.info(f"\n[{cat}] {len(items)}개 처리 중...")
+    # ── 다나와 수집 ──
+    log.info("\n=== [1/2] 다나와 수집 시작 ===")
+    danawa_results: dict[str, dict] = {}   # pcode → result
+    for cat, items in danawa_cats.items():
+        log.info(f"\n[다나와/{cat}] {len(items)}개 처리 중...")
         for item in items:
-            product = fetch_product(item)
-            row = {
-                "date":        today,
-                "category":    cat,
-                "subcategory": item.get("subcategory") or "",
-                "pcode":       product["pcode"],
-                "name":        product["name"],
-                "price":       product["price"],
-                "url":         product["url"],
-            }
-            all_rows.append(row)
-            if cat == "GPU":
-                gpu_products.append(product)
+            res = fetch_danawa(item)
+            danawa_results[res["pcode"]] = res
             time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
 
-    # CSV 저장
-    save_to_csv(all_rows, OUTPUT_CSV)
+    # ── 컴퓨존 수집 ──
+    log.info("\n=== [2/2] 컴퓨존 수집 시작 ===")
+    cz_results: dict[str, dict] = {}       # product_no → result
+    for cat, items in compuzone_cats.items():
+        log.info(f"\n[컴퓨존/{cat}] {len(items)}개 처리 중...")
+        for item in items:
+            res = fetch_compuzone(item)
+            cz_results[res["product_no"]] = res
+            time.sleep(random.uniform(DELAY_MIN, DELAY_MAX))
+
+    # ── 비교 행 생성 ──
+    log.info("\n=== 가격 비교 매칭 ===")
+    all_rows: list[dict] = []
+    gpu_rows: list[dict] = []
+
+    all_cats = sorted(set(list(danawa_cats.keys()) + list(compuzone_cats.keys())))
+    for cat in all_cats:
+        dw_items = danawa_cats.get(cat, [])
+        cz_items = compuzone_cats.get(cat, [])
+        rows = build_comparison_rows(today, cat, dw_items, cz_items, danawa_results, cz_results)
+        all_rows.extend(rows)
+        if cat == "GPU":
+            gpu_rows.extend(rows)
+
+    # ── CSV 저장 ──
+    save_comparison_csv(all_rows, COMPARE_CSV)
 
     gpu_summary = []
-    if gpu_products:
+    if gpu_rows:
         log.info("\n=== GPU 모델군 평균가 계산 ===")
-        gpu_summary = calc_gpu_summary(today, gpu_products)
+        gpu_summary = calc_gpu_summary(today, gpu_rows)
         save_gpu_summary(gpu_summary, GPU_SUMMARY_CSV)
 
-    # 전날 CSV 로드 (가격 변동 비교용)
+    # ── 전날 데이터 로드 ──
     yesterday = (date.today() - timedelta(days=1)).isoformat()
-    prev_csv  = Path(f"price_history_{yesterday}.csv")
+    prev_csv  = Path(f"price_comparison_{yesterday}.csv")
     prev_rows = None
     if prev_csv.exists():
         with prev_csv.open(encoding="utf-8-sig") as f:
@@ -407,15 +560,14 @@ def main():
     else:
         log.info("전날 CSV 없음 — 변동 비교 생략")
 
-    # Slack 리포트 전송
+    # ── Slack 리포트 ──
     log.info("\n=== Slack 리포트 전송 ===")
     message = build_slack_message(today, all_rows, gpu_summary, prev_rows)
     send_slack_dm(message)
 
-    # 결과 요약
-    success = sum(1 for r in all_rows if r["price"])
-    fail    = len(all_rows) - success
-    log.info(f"\n=== 완료: 성공 {success}개 / 실패 {fail}개 ===")
+    dw_ok = sum(1 for r in all_rows if r["danawa_price"])
+    cz_ok = sum(1 for r in all_rows if r["compuzone_price"])
+    log.info(f"\n=== 완료: 총 {len(all_rows)}개 │ 다나와 성공 {dw_ok}개 │ 컴퓨존 성공 {cz_ok}개 ===")
 
 
 if __name__ == "__main__":
