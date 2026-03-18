@@ -1,0 +1,36 @@
+name: 다나와 가격 자동 수집
+
+on:
+  schedule:
+    # 매일 오전 9시 (KST) 실행 — GitHub Actions는 UTC 기준이라 00:00 UTC = 09:00 KST
+    - cron: "0 0 * * *"
+  workflow_dispatch:   # 수동 실행 버튼도 유지
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 가격 수집 실행
+        run: python scraper.py
+
+      - name: 결과 CSV 커밋 & 푸시
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add price_history_*.csv gpu_group_summary_*.csv
+          git diff --staged --quiet || git commit -m "chore: 가격 수집 $(date +'%Y-%m-%d')"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

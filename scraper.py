@@ -17,11 +17,11 @@ from collections import defaultdict
 from bs4 import BeautifulSoup
 
 # ── 설정 ────────────────────────────────────────────
-URL_FILE        = Path("가격비교.txt")        # URL 목록 파일
-OUTPUT_CSV      = Path("price_history.csv")   # 개별 제품 누적 저장
-GPU_SUMMARY_CSV = Path("gpu_group_summary.csv")  # GPU 모델군 평균가 누적 저장
+URL_FILE  = Path("가격비교.txt")   # URL 목록 파일
 DELAY_MIN = 1.5
 DELAY_MAX = 3.5
+# CSV 파일명은 실행 시점 날짜로 동적 생성
+# 예: price_history_2026-03-18.csv / gpu_group_summary_2026-03-18.csv
 # ────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -239,6 +239,12 @@ def calc_gpu_summary(today: str, gpu_products: list[dict]) -> list[dict]:
 def main():
     today = date.today().isoformat()
     log.info(f"=== 다나와 가격 수집 시작: {today} ===")
+
+    # 날짜가 포함된 CSV 파일명 생성
+    # 예: price_history_2026-03-18.csv / gpu_group_summary_2026-03-18.csv
+    OUTPUT_CSV      = Path(f"price_history_{today}.csv")
+    GPU_SUMMARY_CSV = Path(f"gpu_group_summary_{today}.csv")
+    log.info(f"저장 파일: {OUTPUT_CSV} / {GPU_SUMMARY_CSV}")
 
     if not URL_FILE.exists():
         raise FileNotFoundError(f"{URL_FILE} 파일을 찾을 수 없습니다.")
