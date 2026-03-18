@@ -90,18 +90,15 @@ def parse_url_file(path: Path) -> dict[str, list[dict]]:
         if current is None:
             continue
 
-        # "제품명 - URL" 형식
-        if " - http" in line or " -http" in line:
-            parts = re.split(r"\s*-\s*(?=https?://)", line, maxsplit=1)
-            if len(parts) == 2:
-                prod_name = parts[0].strip()
-                url = parts[1].strip()
-                categories[current].append({"name": prod_name, "url": url})
-                continue
-
-        # URL만 있는 형식
-        if line.startswith("http"):
-            categories[current].append({"name": None, "url": line})
+        # URL 위치를 직접 찾아서 제품명과 분리
+        # (제품명에 하이픈이 포함된 경우에도 안전하게 처리)
+        url_match = re.search(r'(https?://\S+)', line)
+        if url_match:
+            url = url_match.group(1)
+            name_part = line[:url_match.start()].strip().rstrip('-').strip()
+            prod_name = name_part if name_part else None
+            categories[current].append({"name": prod_name, "url": url})
+            continue
 
     return categories
 
