@@ -198,9 +198,9 @@ def build_slack_message(
                 dw  = f"{int(r['danawa_price']):,}원"    if r["danawa_price"]    else "미확인 ❌"
                 cz  = f"{int(r['compuzone_price']):,}원" if r["compuzone_price"] else "미확인 ❌"
                 if r["cheaper"] == "컴퓨존":
-                    diff_str = f"컴퓨존 {abs(int(r['price_diff'])):,}원 저렴 🟢"
+                    diff_str = f"컴퓨존 {abs(r['price_diff']):,}원 저렴 🔵"
                 elif r["cheaper"] == "다나와":
-                    diff_str = f"다나와 {abs(int(r['price_diff'])):,}원 저렴 🔵"
+                    diff_str = f"다나와 {abs(r['price_diff']):,}원 저렴 🟢"
                 elif r["cheaper"] == "동일":
                     diff_str = "동일가 ⚪"
                 else:
