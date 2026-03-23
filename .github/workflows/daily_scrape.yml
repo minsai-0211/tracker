@@ -2,8 +2,8 @@ name: 다나와 가격 자동 수집
 
 on:
   schedule:
-    # 매일 오전 9시 (KST) — UTC 00:00
-    - cron: "0 0 * * *"
+    # 매일 오전 9시 (KST) — UTC 00:05
+    - cron: "5 0 * * *"
   workflow_dispatch:
 
 jobs:
