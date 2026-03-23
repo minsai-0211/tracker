@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: danawa-csv
-          path: danawa_*.csv
+          path: data/danawa/danawa_*.csv
           retention-days: 2
 
   # ── Job 2: 컴퓨존 수집 (Playwright, 약 8~10분) ─────────
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: compuzone-csv
-          path: compuzone_*.csv
+          path: data/compuzone/compuzone_*.csv
           retention-days: 2
 
   # ── Job 3: 비교 + Slack 리포트 (Job 1, 2 완료 후) ──────
@@ -75,17 +75,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: danawa-csv
+          path: data/danawa
 
       - name: 컴퓨존 CSV 다운로드
         uses: actions/download-artifact@v4
         with:
           name: compuzone-csv
+          path: data/compuzone
 
       - name: 전날 비교 CSV 복원 (있을 경우)
         run: |
           git fetch origin
           YESTERDAY=$(date -d 'yesterday' +'%Y-%m-%d')
-          git show origin/main:price_comparison_${YESTERDAY}.csv > price_comparison_${YESTERDAY}.csv 2>/dev/null || true
+          mkdir -p data/price_comparison
+          git show origin/main:data/price_comparison/price_comparison_${YESTERDAY}.csv > data/price_comparison/price_comparison_${YESTERDAY}.csv 2>/dev/null || true
 
       - name: 비교 & Slack 리포트
         run: python scraper_compare.py
@@ -97,7 +100,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add danawa_*.csv compuzone_*.csv price_comparison_*.csv gpu_group_summary_*.csv
+          git add data/danawa/ data/compuzone/ data/price_comparison/ data/gpu_group_summary/
           git diff --staged --quiet || git commit -m "chore: 가격 수집 $(date +'%Y-%m-%d')"
           git push
         env:
