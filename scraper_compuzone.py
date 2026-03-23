@@ -18,8 +18,9 @@ from common import HEADERS, parse_url_file, _clean_price
 
 # ── 설정 ─────────────────────────────────────────────
 COMPUZONE_FILE = Path("컴퓨존_가격비교.txt")
-DELAY_MIN      = 1.0   # Playwright는 이미 networkidle 대기를 하므로 딜레이 단축
+DELAY_MIN      = 1.0
 DELAY_MAX      = 2.0
+OUTPUT_DIR     = Path("data/compuzone")
 # ─────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -219,7 +220,8 @@ def main():
     today = date.today().isoformat()
     log.info(f"=== 컴퓨존 수집 시작 (Playwright): {today} ===")
 
-    OUTPUT_CSV = Path(f"compuzone_{today}.csv")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_CSV = OUTPUT_DIR / f"compuzone_{today}.csv"
 
     if not COMPUZONE_FILE.exists():
         raise FileNotFoundError(f"{COMPUZONE_FILE} 파일을 찾을 수 없습니다.")

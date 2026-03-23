@@ -20,6 +20,7 @@ from common import HEADERS, parse_url_file, _clean_price
 DANAWA_FILE = Path("가격비교.txt")
 DELAY_MIN   = 1.5
 DELAY_MAX   = 3.5
+OUTPUT_DIR  = Path("data/danawa")
 # ─────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -108,7 +109,8 @@ def main():
     today = date.today().isoformat()
     log.info(f"=== 다나와 수집 시작: {today} ===")
 
-    OUTPUT_CSV = Path(f"danawa_{today}.csv")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_CSV = OUTPUT_DIR / f"danawa_{today}.csv"
 
     if not DANAWA_FILE.exists():
         raise FileNotFoundError(f"{DANAWA_FILE} 파일을 찾을 수 없습니다.")

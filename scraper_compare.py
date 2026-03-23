@@ -240,8 +240,8 @@ def main():
     today = date.today().isoformat()
     log.info(f"=== 가격 비교 & Slack 리포트: {today} ===")
 
-    dw_csv = Path(f"danawa_{today}.csv")
-    cz_csv = Path(f"compuzone_{today}.csv")
+    dw_csv = Path(f"data/danawa/danawa_{today}.csv")
+    cz_csv = Path(f"data/compuzone/compuzone_{today}.csv")
 
     dw_rows = load_csv(dw_csv)
     cz_rows = load_csv(cz_csv)
@@ -250,13 +250,18 @@ def main():
     rows        = build_comparison(today, dw_rows, cz_rows)
     gpu_summary = calc_gpu_summary(today, rows)
 
-    save_comparison_csv(rows, Path(f"price_comparison_{today}.csv"))
+    compare_dir = Path("data/price_comparison")
+    compare_dir.mkdir(parents=True, exist_ok=True)
+    save_comparison_csv(rows, compare_dir / f"price_comparison_{today}.csv")
+
     if gpu_summary:
-        save_gpu_summary(gpu_summary, Path(f"gpu_group_summary_{today}.csv"))
+        gpu_dir = Path("data/gpu_group_summary")
+        gpu_dir.mkdir(parents=True, exist_ok=True)
+        save_gpu_summary(gpu_summary, gpu_dir / f"gpu_group_summary_{today}.csv")
 
     # 전날 비교
     yesterday = (date.today() - timedelta(days=1)).isoformat()
-    prev_path = Path(f"price_comparison_{yesterday}.csv")
+    prev_path = Path(f"data/price_comparison/price_comparison_{yesterday}.csv")
     prev_rows = None
     if prev_path.exists():
         prev_rows = load_csv(prev_path)
