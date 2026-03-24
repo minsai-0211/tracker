@@ -57,10 +57,33 @@ jobs:
           path: data/compuzone/compuzone_*.csv
           retention-days: 2
 
-  # ── Job 3: 비교 + Slack 리포트 (Job 1, 2 완료 후) ──────
+  # ── Job 3: 샵다나와 수집 (requests, 약 4분) ────────────
+  shopdanawa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 샵다나와 수집 실행
+        run: python scraper_shopdanawa.py
+
+      - name: CSV 업로드 (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopdanawa-csv
+          path: data/shopdanawa/shopdanawa_*.csv
+          retention-days: 2
+
+  # ── Job 4: 비교 + Slack 리포트 (Job 1, 2, 3 완료 후) ───
   compare:
     runs-on: ubuntu-latest
-    needs: [danawa, compuzone]   # 두 job 모두 끝나야 실행
+    needs: [danawa, compuzone, shopdanawa]
     steps:
       - uses: actions/checkout@v4
 
@@ -82,12 +105,19 @@ jobs:
         with:
           name: compuzone-csv
           path: data/compuzone
- 
+
+      - name: 샵다나와 CSV 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: shopdanawa-csv
+          path: data/shopdanawa
+
       - name: 다운로드 경로 확인
         run: |
           echo "=== data/danawa ===" && ls data/danawa/ || echo "없음"
           echo "=== data/compuzone ===" && ls data/compuzone/ || echo "없음"
- 
+          echo "=== data/shopdanawa ===" && ls data/shopdanawa/ || echo "없음"
+
       - name: 전날 비교 CSV 복원 (있을 경우)
         run: |
           git fetch origin
@@ -105,7 +135,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/danawa/ data/compuzone/ data/price_comparison/ data/gpu_group_summary/
+          git add data/danawa/ data/compuzone/ data/shopdanawa/ data/price_comparison/ data/gpu_group_summary/
           git diff --staged --quiet || git commit -m "chore: 가격 수집 $(date +'%Y-%m-%d')"
           git push
         env:
