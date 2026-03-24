@@ -66,21 +66,20 @@ def fetch_shopdanawa(item: dict) -> dict:
     price = None
     text  = soup.get_text(" ")
 
-    # 1순위: **가격** 볼드 패턴 — 판매가 섹션의 굵은 가격 (견적 배너보다 늦게 등장하지만 정확)
-    # "판매가" 이후 텍스트만 슬라이싱해서 탐색 → 배너 오파싱 방지
-    sale_idx = text.find("판매가")
-    if sale_idx != -1:
-        sale_text = text[sale_idx:sale_idx + 200]  # 판매가 라벨 이후 200자만
-        m = re.search(r"([\d,]{5,})\s*원", sale_text)
+    # 1순위: "총 상품금액" — 페이지 하단 고정 위치, 배너 영향 없음
+    total_idx = text.find("총 상품금액")
+    if total_idx != -1:
+        total_text = text[total_idx:total_idx + 80]
+        m = re.search(r"([\d,]{5,})\s*원", total_text)
         if m:
             price = _clean_price(m.group(1))
 
-    # 2순위: "총 상품금액" 바로 뒤 (판매가와 항상 동일, 페이지 하단에 위치)
+    # 2순위: "판매가" 라벨 이후 슬라이싱
     if not price:
-        total_idx = text.find("총 상품금액")
-        if total_idx != -1:
-            total_text = text[total_idx:total_idx + 100]
-            m = re.search(r"([\d,]{5,})\s*원", total_text)
+        sale_idx = text.find("판매가")
+        if sale_idx != -1:
+            sale_text = text[sale_idx:sale_idx + 200]
+            m = re.search(r"([\d,]{5,})\s*원", sale_text)
             if m:
                 price = _clean_price(m.group(1))
 
@@ -93,17 +92,15 @@ def fetch_shopdanawa(item: dict) -> dict:
                 if price:
                     break
 
-    # 4순위: class 스캔
+    # 4순위: strong/em 태그 중 숫자만 있는 것 (판매가 bold 텍스트)
     if not price:
-        for tag in soup.find_all(
-            ["span", "strong", "em", "p"],
-            class_=re.compile(r"price|sell|cost", re.I)
-        ):
-            first_token = (tag.get_text(separator=" ").split() or [""])[0]
-            candidate = _clean_price(first_token)
-            if candidate:
-                price = candidate
-                break
+        for tag in soup.find_all(["strong", "em", "b"]):
+            txt = tag.get_text(strip=True).replace(",", "")
+            if re.fullmatch(r"\d{5,8}", txt):  # 5~8자리 순수 숫자
+                candidate = _clean_price(txt)
+                if candidate:
+                    price = candidate
+                    break
 
     log.info(
         f"  [seq={seq}] {name or '이름불명'} → {price:,}원"
