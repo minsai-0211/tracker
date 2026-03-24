@@ -82,7 +82,12 @@ jobs:
         with:
           name: compuzone-csv
           path: data/compuzone
-
+ 
+      - name: 다운로드 경로 확인
+        run: |
+          echo "=== data/danawa ===" && ls data/danawa/ || echo "없음"
+          echo "=== data/compuzone ===" && ls data/compuzone/ || echo "없음"
+ 
       - name: 전날 비교 CSV 복원 (있을 경우)
         run: |
           git fetch origin
