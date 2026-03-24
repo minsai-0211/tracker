@@ -30,7 +30,8 @@ COMPARE_FIELDNAMES = [
     "date", "category", "subcategory", "name",
     "danawa_price", "danawa_url",
     "compuzone_price", "compuzone_url",
-    "price_diff", "cheaper",
+    "shopdanawa_price", "shopdanawa_url",
+    "cheapest",
 ]
 GPU_FIELDNAMES = ["date", "gpu_group", "count", "avg_price", "min_price", "max_price"]
 
@@ -43,43 +44,52 @@ def load_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-# ── 1:1 매칭 ─────────────────────────────────────────
-def build_comparison(today: str, dw_rows: list[dict], cz_rows: list[dict]) -> list[dict]:
+# ── 1:1:1 매칭 ───────────────────────────────────────
+def build_comparison(today: str, dw_rows: list[dict], cz_rows: list[dict], sd_rows: list[dict]) -> list[dict]:
     """
-    두 CSV를 (category, subcategory, name) 기준으로 매칭.
-    컴퓨존에 없는 항목은 compuzone_price = None 으로 처리.
+    세 CSV를 (category, name) 기준으로 매칭.
+    없는 항목은 price = None 으로 처리.
     """
-    # 컴퓨존 rows를 (category, name) → row 로 인덱싱
-    cz_map: dict[tuple, dict] = {}
-    for r in cz_rows:
-        key = (r["category"], r["name"])
-        cz_map[key] = r
+    cz_map: dict[tuple, dict] = {(r["category"], r["name"]): r for r in cz_rows}
+    sd_map: dict[tuple, dict] = {(r["category"], r["name"]): r for r in sd_rows}
 
     result = []
     for dw in dw_rows:
-        key    = (dw["category"], dw["name"])
-        cz     = cz_map.get(key)
+        key = (dw["category"], dw["name"])
+        cz  = cz_map.get(key)
+        sd  = sd_map.get(key)
 
-        dw_price = int(dw["price"]) if dw.get("price") else None
-        cz_price = int(cz["price"]) if cz and cz.get("price") else None
+        dw_price = int(dw["price"])   if dw.get("price")              else None
+        cz_price = int(cz["price"])   if cz and cz.get("price")       else None
+        sd_price = int(sd["price"])   if sd and sd.get("price")        else None
 
-        price_diff = None
-        cheaper    = None
-        if dw_price and cz_price:
-            price_diff = cz_price - dw_price
-            cheaper = "컴퓨존" if price_diff < 0 else ("다나와" if price_diff > 0 else "동일")
+        # 최저가 쇼핑몰 계산
+        candidates = {
+            k: v for k, v in {
+                "다나와": dw_price,
+                "컴퓨존": cz_price,
+                "샵다나와": sd_price,
+            }.items() if v is not None
+        }
+        if candidates:
+            min_price = min(candidates.values())
+            cheapest_shops = [k for k, v in candidates.items() if v == min_price]
+            cheapest = "/".join(cheapest_shops)  # 동일가면 둘 다 표시
+        else:
+            cheapest = ""
 
         result.append({
-            "date":            today,
-            "category":        dw["category"],
-            "subcategory":     dw.get("subcategory", ""),
-            "name":            dw["name"],
-            "danawa_price":    dw_price,
-            "danawa_url":      dw.get("url", ""),
-            "compuzone_price": cz_price,
-            "compuzone_url":   cz.get("url", "") if cz else "",
-            "price_diff":      price_diff,
-            "cheaper":         cheaper or "",
+            "date":             today,
+            "category":         dw["category"],
+            "subcategory":      dw.get("subcategory", ""),
+            "name":             dw["name"],
+            "danawa_price":     dw_price,
+            "danawa_url":       dw.get("url", ""),
+            "compuzone_price":  cz_price,
+            "compuzone_url":    cz.get("url", "") if cz else "",
+            "shopdanawa_price": sd_price,
+            "shopdanawa_url":   sd.get("url", "") if sd else "",
+            "cheapest":         cheapest,
         })
 
     return result
@@ -167,7 +177,7 @@ def build_slack_message(
     gpu_summary: list[dict],
     prev_rows: list[dict] | None = None,
 ) -> str:
-    lines = [f"📊 *다나와 vs 컴퓨존 가격 리포트 — {today}*", ""]
+    lines = [f"📊 *다나와 vs 컴퓨존 vs 샵다나와 가격 리포트 — {today}*", ""]
 
     # GPU 평균가
     lines.append("*🎮 GPU 모델군 평균가 (다나와 기준)*")
@@ -195,18 +205,16 @@ def build_slack_message(
         for sub, items in structured[cat].items():
             lines.append(f"  _{sub}_")
             for r in items:
-                dw  = f"{int(r['danawa_price']):,}원"    if r["danawa_price"]    else "미확인 ❌"
-                cz  = f"{int(r['compuzone_price']):,}원" if r["compuzone_price"] else "미확인 ❌"
-                if r["cheaper"] == "컴퓨존":
-                    diff_str = f"컴퓨존 {abs(r['price_diff']):,}원 저렴 🔵"
-                elif r["cheaper"] == "다나와":
-                    diff_str = f"다나와 {abs(r['price_diff']):,}원 저렴 🟢"
-                elif r["cheaper"] == "동일":
-                    diff_str = "동일가 ⚪"
+                dw = f"{int(r['danawa_price']):,}원"    if r["danawa_price"]    else "미확인 ❌"
+                cz = f"{int(r['compuzone_price']):,}원" if r["compuzone_price"] else "미확인 ❌"
+                sd = f"{int(r['shopdanawa_price']):,}원" if r.get("shopdanawa_price") else "미확인 ❌"
+                cheapest = r.get("cheapest", "")
+                if cheapest:
+                    cheapest_str = f"최저: {cheapest} 🏆"
                 else:
-                    diff_str = "비교불가"
+                    cheapest_str = "비교불가"
                 lines.append(
-                    f"    • {r['name'][:28]:<28s} │ 다나와 {dw:>12s} │ 컴퓨존 {cz:>12s} │ {diff_str}"
+                    f"    • {r['name'][:28]:<28s} │ 다나와 {dw:>12s} │ 컴퓨존 {cz:>12s} │ 샵다나와 {sd:>12s} │ {cheapest_str}"
                 )
         lines.append("")
 
@@ -230,7 +238,8 @@ def build_slack_message(
 
     dw_ok = sum(1 for r in rows if r["danawa_price"])
     cz_ok = sum(1 for r in rows if r["compuzone_price"])
-    lines.append(f"_수집: 총 {len(rows)}개 │ 다나와 성공 {dw_ok}개 │ 컴퓨존 성공 {cz_ok}개_")
+    sd_ok = sum(1 for r in rows if r.get("shopdanawa_price"))
+    lines.append(f"_수집: 총 {len(rows)}개 │ 다나와 {dw_ok}개 │ 컴퓨존 {cz_ok}개 │ 샵다나와 {sd_ok}개_")
 
     return "\n".join(lines)
 
@@ -242,12 +251,14 @@ def main():
 
     dw_csv = Path(f"data/danawa/danawa_{today}.csv")
     cz_csv = Path(f"data/compuzone/compuzone_{today}.csv")
+    sd_csv = Path(f"data/shopdanawa/shopdanawa_{today}.csv")
 
     dw_rows = load_csv(dw_csv)
     cz_rows = load_csv(cz_csv)
-    log.info(f"다나와 {len(dw_rows)}행, 컴퓨존 {len(cz_rows)}행 로드 완료")
+    sd_rows = load_csv(sd_csv) if sd_csv.exists() else []
+    log.info(f"다나와 {len(dw_rows)}행, 컴퓨존 {len(cz_rows)}행, 샵다나와 {len(sd_rows)}행 로드 완료")
 
-    rows        = build_comparison(today, dw_rows, cz_rows)
+    rows        = build_comparison(today, dw_rows, cz_rows, sd_rows)
     gpu_summary = calc_gpu_summary(today, rows)
 
     compare_dir = Path("data/price_comparison")
@@ -274,7 +285,8 @@ def main():
 
     dw_ok = sum(1 for r in rows if r["danawa_price"])
     cz_ok = sum(1 for r in rows if r["compuzone_price"])
-    log.info(f"\n=== 완료: 총 {len(rows)}개 │ 다나와 성공 {dw_ok}개 │ 컴퓨존 성공 {cz_ok}개 ===")
+    sd_ok = sum(1 for r in rows if r.get("shopdanawa_price"))
+    log.info(f"\n=== 완료: 총 {len(rows)}개 │ 다나와 {dw_ok}개 │ 컴퓨존 {cz_ok}개 │ 샵다나와 {sd_ok}개 ===")
 
 
 if __name__ == "__main__":
