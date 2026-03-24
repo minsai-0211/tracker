@@ -1,0 +1,113 @@
+1. CPU
+
+- 게이밍 & 작업용 (AMD)
+AMD 라이젠9-6세대 9950X3D (그래니트 릿지) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77790914
+AMD 라이젠7-6세대 9800X3D (그래니트 릿지) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=70531547
+AMD 라이젠7-5세대 7800X3D (라파엘) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=19627934
+AMD 라이젠5-6세대 9600X (그래니트 릿지) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=62794079
+AMD 라이젠5-5세대 7500X3D (라파엘) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=104223188
+
+- 메인스트림 (AMD)
+AMD 라이젠5-5세대 7500F (라파엘) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=21694499
+AMD 라이젠5-4세대 5600G (세잔) (멀티팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=14927675
+
+- 인텔 울트라
+인텔 코어 울트라7 시리즈2 265K (애로우레이크) (정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=69059687
+인텔 코어 울트라5 시리즈2 245K (애로우레이크) (정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=69059753
+
+- 인텔 14세대
+인텔 코어i5-14세대 14600K (랩터레이크 리프레시) (정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=28799654
+인텔 코어i5-14세대 14400F (랩터레이크 리프레시) (밸류팩 정품) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=76555634
+
+2. RAM
+
+- DDR5 (16GB)
+삼성전자 DDR5-5600 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=18911780
+ESSENCORE KLEVV DDR5-5600 CL46 파인인포 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=18965774
+SK하이닉스 DDR5-5600 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=18883523
+마이크론 Crucial DDR5-5600 CL46 대원씨티에스 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=20369126
+Apacer DDR5-5600 CL46 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=99893666
+
+- DDR4 (16GB)
+삼성전자 DDR4-3200 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=11790199
+ESSENCORE KLEVV DDR4-3200 CL22 파인인포 (16GB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=11787091
+
+- DDR5 튜닝램 (32GB)
+G.SKILL DDR5-6000 CL36 TRIDENT Z5 NEO RGB J 패키지 (32GB(16Gx2)) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=17931893
+ESSENCORE KLEVV DDR5-6000 CL30 CRAS V RGB WHITE 패키지 서린 (32GB(16Gx2)) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=32076077
+
+
+3. GPU
+
+- RTX 5090
+MSI 지포스 RTX 5090 슈프림 SOC D7 32GB 하이퍼프로져 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=76550939
+PALIT 지포스 RTX 5090 GAMEROCK D7 32GB 이엠텍 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75376490
+GIGABYTE AORUS 지포스 RTX 5090 MASTER ICE D7 32GB 제이씨현 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75184277
+ASUS ROG Astral 지포스 RTX 5090 OC D7 32GB 대원씨티에스 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75375449
+
+- RTX 5080
+PALIT 지포스 RTX 5080 GAMINGPRO D7 16GB 이엠텍 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75184250
+MSI 지포스 RTX 5080 뱅가드 SOC D7 16GB 하이퍼프로져 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75541700
+ZOTAC GAMING 지포스 RTX 5080 AMP EXTREME INFINITY D7 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=74971838
+GIGABYTE 지포스 RTX 5080 GAMING OC D7 16GB 피씨디렉트 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75074666
+
+- RTX 5070 Ti
+ZOTAC GAMING 지포스 RTX 5070 Ti SOLID OC D7 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=76464143
+MSI 지포스 RTX 5070 Ti 게이밍 트리오 OC D7 16GB 트라이프로져4 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90160715
+이엠텍 지포스 RTX 5070 Ti MIRACLE WHITE D7 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77020520
+ZOTAC GAMING 지포스 RTX 5070 Ti AMP Extreme Infinity D7 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=76464395
+
+- RTX 5070
+PALIT 지포스 RTX 5070 INFINITY 3 D7 12GB 이엠텍 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=79402577
+MSI 지포스 RTX 5070 게이밍 트리오 OC D7 12GB 트라이프로져4 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77379380
+ZOTAC GAMING 지포스 RTX 5070 SOLID OC D7 12GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77319413
+MSI 지포스 RTX 5070 벤투스 2X OC D7 12GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77379452
+
+- RTX 5060 Ti
+PALIT 지포스 RTX 5060 Ti DUAL D7 8GB 이엠텍 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=89732453
+PALIT 지포스 RTX 5060 Ti INFINITY 3 D7 16GB 이엠텍 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=81037490
+ZOTAC GAMING 지포스 RTX 5060 Ti Twin Edge OC D7 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=81062540
+이엠텍 지포스 RTX 5060 Ti MIRACLE WHITE D7 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=91189013
+
+- RTX 5060
+MSI 지포스 RTX 5060 벤투스 2X OC D7 8GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90956033
+PALIT 지포스 RTX 5060 DUAL OC D7 8GB 이엠텍 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90887879
+GAINWARD 지포스 RTX 5060 고스트 D7 8GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90892928
+ZOTAC GAMING 지포스 RTX 5060 Twin Edge OC D7 8GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=91910279
+
+- RX 9070 XT
+XFX 라데온 RX 9070 XT SWIFT D6 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77378288
+SAPPHIRE 라데온 RX 9070 XT NITRO+ OC D6 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77378093
+ASUS PRIME 라데온 RX 9070 XT OC D6 16GB 대원씨티에스 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77461292
+SAPPHIRE 라데온 RX 9070 XT PURE OC D6 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77381780
+ASRock 라데온 RX 9070 XT 스틸레전드 D6 16GB 대원씨티에스 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77318285
+SAPPHIRE 라데온 RX 9070 XT PULSE D6 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77378039
+
+- RX 9060 XT
+GIGABYTE 라데온 RX 9060 XT Gaming OC D6 16GB 제이씨현 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=91867763
+XFX 라데온 RX 9060 XT SWIFT DUAL OC D6 16GB - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=92892695
+ASRock 라데온 RX 9060 XT CHALLENGER OC D6 16GB 대원씨티에스 - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=91909763
+
+4. SSD
+
+- 최상급 1TB
+삼성전자 9100 PRO M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=78716702
+Western Digital WD BLACK SN8100 M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=92186393
+SK하이닉스 Platinum P51 M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=72823220
+키오시아 EXCERIA PRO G2 M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=104228879
+
+- 상급 1TB
+Western Digital WD BLACK SN850X M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=17788487
+삼성전자 990 PRO M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=18297002
+SK하이닉스 Platinum P41 M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=17001050
+키오시아 EXCERIA PLUS G4 M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=74056493
+
+- 중급 1TB
+삼성전자 990 EVO Plus M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=69869543
+SK하이닉스 Gold P31 M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=13161338
+마이크론 Crucial T705 M.2 NVMe 대원씨티에스 (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=41264234
+
+- 하급 1TB
+마이크론 Crucial P310 M.2 NVMe 대원씨티에스 (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=67852961
+마이크론 Crucial T500 M.2 NVMe 대원씨티에스 (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=29666111
+ESSENCORE KLEVV CRAS C910G M.2 NVMe (1TB) - https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=98242505
