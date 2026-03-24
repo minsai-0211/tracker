@@ -199,11 +199,9 @@ def fetch_compuzone_batch(items: list[dict]) -> list[dict]:
 
 
 def save_csv(rows: list[dict], path: Path, today: str):
-    write_header = not path.exists()
-    with path.open("a", newline="", encoding="utf-8-sig") as f:
+    with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        if write_header:
-            writer.writeheader()
+        writer.writeheader()
         for r in rows:
             writer.writerow({
                 "date":        today,

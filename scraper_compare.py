@@ -123,20 +123,16 @@ def calc_gpu_summary(today: str, rows: list[dict]) -> list[dict]:
 
 # ── CSV 저장 ──────────────────────────────────────────
 def save_comparison_csv(rows: list[dict], path: Path):
-    write_header = not path.exists()
-    with path.open("a", newline="", encoding="utf-8-sig") as f:
+    with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=COMPARE_FIELDNAMES)
-        if write_header:
-            writer.writeheader()
+        writer.writeheader()
         writer.writerows(rows)
     log.info(f"비교 CSV 저장: {path} ({len(rows)}행)")
 
 def save_gpu_summary(rows: list[dict], path: Path):
-    write_header = not path.exists()
-    with path.open("a", newline="", encoding="utf-8-sig") as f:
+    with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=GPU_FIELDNAMES)
-        if write_header:
-            writer.writeheader()
+        writer.writeheader()
         writer.writerows(rows)
     log.info(f"GPU 요약 저장: {path} ({len(rows)}행)")
 

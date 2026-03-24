@@ -96,11 +96,9 @@ def fetch_danawa(item: dict) -> dict:
 
 
 def save_csv(rows: list[dict], path: Path):
-    write_header = not path.exists()
-    with path.open("a", newline="", encoding="utf-8-sig") as f:
+    with path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        if write_header:
-            writer.writeheader()
+        writer.writeheader()
         writer.writerows(rows)
     log.info(f"저장 완료: {path} ({len(rows)}행)")
 
