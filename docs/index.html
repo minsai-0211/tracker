@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PC 견적 Tool</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --surface2: #f8f9fa;
+      --border: #e2e6ea;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --text: #1a202c;
+      --text-muted: #6b7280;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --red: #dc2626;
+      --yellow: #d97706;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(37,99,235,.3);
+    }
+    header h1 { font-size: 20px; font-weight: 700; }
+    header .subtitle { font-size: 13px; opacity: .8; margin-left: auto; }
+
+    /* ── 레이아웃 ── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* ── 카드 ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    /* ── 컴포넌트 행 ── */
+    .components { display: flex; flex-direction: column; gap: 12px; }
+
+    .comp-row {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .comp-main {
+      display: grid;
+      grid-template-columns: 100px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+    }
+    .comp-label {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .comp-label .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .comp-label .badge.manual {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .comp-controls { display: flex; flex-direction: column; gap: 6px; }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color .15s;
+    }
+    select:focus, input:focus { border-color: var(--primary); }
+
+    .comp-selects { display: flex; gap: 8px; }
+    .comp-selects select:first-child { flex: 0 0 160px; }
+    .comp-selects select:last-child { flex: 1; }
+
+    .qty-wrap { display: flex; gap: 8px; align-items: center; }
+    .qty-wrap label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .qty-wrap select { flex: 0 0 70px; }
+
+    .comp-price-tag {
+      text-align: right;
+      white-space: nowrap;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--green);
+      min-width: 110px;
+    }
+    .comp-price-tag.empty { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+
+    /* ── 가격 비교 패널 ── */
+    .price-panel {
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+      padding: 10px 16px;
+      display: none;
+    }
+    .price-panel.show { display: block; }
+
+    .price-panel-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .price-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .price-table th {
+      text-align: left;
+      padding: 5px 8px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .price-table td { padding: 5px 8px; }
+    .price-table tr.cheapest-row { background: var(--green-bg); }
+    .price-table tr.cheapest-row td { color: var(--green); font-weight: 600; }
+    .price-table tr.na-row td { color: #c0c4cc; }
+
+    .shop-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 11px;
+      padding: 2px 6px;
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .shop-link:hover { background: var(--primary-light); }
+
+    /* ── 수동 입력 ── */
+    .manual-inputs { display: flex; gap: 8px; }
+    .manual-inputs input:first-child { flex: 1; }
+    .manual-inputs input[type="number"] { flex: 0 0 130px; }
+
+    /* ── 우측 요약 ── */
+    .summary-card { position: sticky; top: 20px; }
+
+    .summary-body { padding: 0; }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-item:last-child { border-bottom: none; }
+    .summary-item .si-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+      min-width: 56px;
+    }
+    .summary-item .si-name {
+      font-size: 12px;
+      color: var(--text);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .summary-item .si-name.empty { color: var(--text-muted); font-style: italic; }
+    .summary-item .si-price {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .summary-item .si-price.empty { color: var(--border); }
+
+    .total-row {
+      padding: 14px 16px;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .total-row .total-label { font-weight: 600; font-size: 14px; }
+    .total-row .total-amount { font-weight: 800; font-size: 20px; }
+
+    .copy-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-top: none;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 0 0 var(--radius) var(--radius);
+      transition: background .15s;
+    }
+    .copy-btn:hover { background: var(--primary-light); }
+
+    /* ── 알림 토스트 ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: #1a202c;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all .3s;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── 로딩 ── */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .loading::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--red);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🖥️ PC 견적 Tool</h1>
+  <span class="subtitle" id="update-date">데이터 로딩 중...</span>
+</header>
+
+<div id="app">
+  <div class="loading">가격 데이터를 불러오는 중...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 카테고리 정의 ──────────────────────────────────────────────────────────
+const TRACKED = ['CPU', 'RAM', 'GPU', 'SSD'];
+
+const UNTRACKED = [
+  { key: 'motherboard', label: '메인보드' },
+  { key: 'cooler',      label: '쿨러' },
+  { key: 'psu',         label: '파워' },
+  { key: 'case',        label: '케이스' },
+];
+
+const CATEGORY_ICON = {
+  CPU: '⚙️', RAM: '💾', GPU: '🎮', SSD: '💿',
+  메인보드: '🔧', 쿨러: '❄️', 파워: '⚡', 케이스: '📦',
+};
+
+// ── 전역 상태 ──────────────────────────────────────────────────────────────
+let allProducts = [];          // 전체 제품 목록
+let grouped    = {};           // { CPU: { subcategory: [product, ...] } }
+let selection  = {};           // { cpu: { product, qty }, ram: { ... }, ... }
+
+// ── 유틸 ──────────────────────────────────────────────────────────────────
+const fmt = n => n ? n.toLocaleString('ko-KR') + '원' : '-';
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── 데이터 로드 ────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch('data.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    document.getElementById('update-date').textContent =
+      `최근 업데이트: ${data.date}`;
+
+    allProducts = data.products;
+    groupProducts();
+    renderApp();
+  } catch (e) {
+    document.getElementById('app').innerHTML =
+      `<div class="error-msg">⚠️ 데이터를 불러올 수 없습니다.<br><small>${e.message}</small></div>`;
+  }
+}
+
+function groupProducts() {
+  grouped = {};
+  for (const p of allProducts) {
+    if (!grouped[p.category]) grouped[p.category] = {};
+    if (!grouped[p.category][p.subcategory]) grouped[p.category][p.subcategory] = [];
+    grouped[p.category][p.subcategory].push(p);
+  }
+}
+
+// ── 렌더링 ─────────────────────────────────────────────────────────────────
+function renderApp() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="container">
+      <div class="components" id="components"></div>
+      <div>
+        <div class="card summary-card">
+          <div class="card-header">견적 요약</div>
+          <div class="summary-body" id="summary-body"></div>
+          <div class="total-row">
+            <span class="total-label">총 견적</span>
+            <span class="total-amount" id="total-price">0원</span>
+          </div>
+          <button class="copy-btn" onclick="copyQuote()">📋 클립보드에 복사</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const container = document.getElementById('components');
+
+  // 트래킹 컴포넌트
+  for (const cat of TRACKED) {
+    if (!grouped[cat]) continue;
+    container.appendChild(renderTrackedRow(cat));
+  }
+
+  // 수동 입력 컴포넌트
+  for (const unt of UNTRACKED) {
+    container.appendChild(renderUntrackedRow(unt));
+  }
+
+  updateSummary();
+}
+
+// ── 트래킹 컴포넌트 행 ─────────────────────────────────────────────────────
+function renderTrackedRow(cat) {
+  const subcats = Object.keys(grouped[cat]);
+  const isRAM = cat === 'RAM';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'comp-row';
+  wrapper.id = `row-${cat}`;
+
+  // 서브카테고리 옵션
+  const subcatOptions = subcats.map(s =>
+    `<option value="${escHtml(s)}">${escHtml(s)}</option>`
+  ).join('');
+
+  // 첫 서브카테고리의 제품 옵션
+  const firstProds = grouped[cat][subcats[0]] || [];
+  const prodOptions = `<option value="">-- 선택 안 함 --</option>` +
+    firstProds.map(p =>
+      `<option value="${escHtml(p.name)}">${escHtml(p.name)}</option>`
+    ).join('');
+
+  const qtyHtml = isRAM ? `
+    <div class="qty-wrap">
+      <label>수량</label>
+      <select id="qty-${cat}" onchange="onQtyChange('${cat}')">
+        <option value="1">1개</option>
+        <option value="2" selected>2개</option>
+      </select>
+    </div>` : '';
+
+  wrapper.innerHTML = `
+    <div class="comp-main">
+      <div class="comp-label">
+        <span>${CATEGORY_ICON[cat] || ''} ${cat}</span>
+        <span class="badge">트래킹</span>
+      </div>
+      <div class="comp-controls">
+        <div class="comp-selects">
+          <select id="subcat-${cat}" onchange="onSubcatChange('${cat}')">
+            ${subcatOptions}
+          </select>
+          <select id="prod-${cat}" onchange="onProductChange('${cat}')">
+            ${prodOptions}
+          </select>
+        </div>
+        ${qtyHtml}
+      </div>
+      <div class="comp-price-tag empty" id="price-tag-${cat}">미선택</div>
+    </div>
+    <div class="price-panel" id="panel-${cat}"></div>
+  `;
+
+  return wrapper;
+}
+
+function onSubcatChange(cat) {
+  const subcat = document.getElementById(`subcat-${cat}`).value;
+  const prodSelect = document.getElementById(`prod-${cat}`);
+  const prods = grouped[cat][subcat] || [];
+
+  prodSelect.innerHTML = `<option value="">-- 선택 안 함 --</option>` +
+    prods.map(p => `<option value="${escHtml(p.name)}">${escHtml(p.name)}</option>`).join('');
+
+  clearSelection(cat);
+}
+
+function onProductChange(cat) {
+  const subcat = document.getElementById(`subcat-${cat}`).value;
+  const name   = document.getElementById(`prod-${cat}`).value;
+  const qty    = parseInt(document.getElementById(`qty-${cat}`)?.value || '1');
+
+  if (!name) {
+    clearSelection(cat);
+    return;
+  }
+
+  const product = (grouped[cat][subcat] || []).find(p => p.name === name);
+  if (!product) return;
+
+  selection[cat] = { product, qty };
+  renderPricePanel(cat, product, qty);
+  updateSummary();
+}
+
+function onQtyChange(cat) {
+  const qty = parseInt(document.getElementById(`qty-${cat}`)?.value || '1');
+  if (selection[cat]) {
+    selection[cat].qty = qty;
+    renderPricePanel(cat, selection[cat].product, qty);
+    updateSummary();
+  }
+}
+
+function clearSelection(cat) {
+  delete selection[cat];
+  const panel = document.getElementById(`panel-${cat}`);
+  if (panel) { panel.innerHTML = ''; panel.classList.remove('show'); }
+  const tag = document.getElementById(`price-tag-${cat}`);
+  if (tag) { tag.textContent = '미선택'; tag.className = 'comp-price-tag empty'; }
+  updateSummary();
+}
+
+function renderPricePanel(cat, product, qty) {
+  const panel = document.getElementById(`panel-${cat}`);
+  const tag   = document.getElementById(`price-tag-${cat}`);
+
+  const shops = [
+    { key: 'danawa',     label: '다나와',  price: product.danawa_price,     url: product.danawa_url },
+    { key: 'compuzone',  label: '컴퓨존',  price: product.compuzone_price,  url: product.compuzone_url },
+    { key: 'shopdanawa', label: '샵다나와', price: product.shopdanawa_price, url: product.shopdanawa_url },
+  ];
+
+  const minPrice = product.min_price;
+  const displayPrice = minPrice ? minPrice * qty : null;
+
+  if (tag) {
+    if (displayPrice) {
+      tag.textContent = fmt(displayPrice) + (qty > 1 ? ` (×${qty})` : '');
+      tag.className = 'comp-price-tag';
+    } else {
+      tag.textContent = '가격 없음';
+      tag.className = 'comp-price-tag empty';
+    }
+  }
+
+  const rows = shops.map(s => {
+    const isCheapest = s.price && s.price === minPrice;
+    const isNA       = !s.price;
+    const rowClass   = isNA ? 'na-row' : (isCheapest ? 'cheapest-row' : '');
+    const priceText  = s.price ? (qty > 1 ? `${fmt(s.price)} × ${qty} = ${fmt(s.price * qty)}` : fmt(s.price)) : '미취급';
+    const badge      = isCheapest ? ' ✓ 최저가' : '';
+    const linkHtml   = s.url
+      ? `<a class="shop-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">바로가기</a>`
+      : '';
+    return `<tr class="${rowClass}">
+      <td>${s.label}${badge}</td>
+      <td>${priceText}</td>
+      <td>${linkHtml}</td>
+    </tr>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <p class="price-panel-title">가격 비교</p>
+    <table class="price-table">
+      <thead><tr><th>쇼핑몰</th><th>가격</th><th>링크</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  panel.classList.add('show');
+}
+
+// ── 수동 입력 컴포넌트 행 ──────────────────────────────────────────────────
+function renderUntrackedRow(unt) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'comp-row';
+  wrapper.id = `row-${unt.key}`;
+
+  wrapper.innerHTML = `
+    <div class="comp-main">
+      <div class="comp-label">
+        <span>${CATEGORY_ICON[unt.label] || ''} ${unt.label}</span>
+        <span class="badge manual">직접입력</span>
+      </div>
+      <div class="comp-controls">
+        <div class="manual-inputs">
+          <input type="text"   id="name-${unt.key}"  placeholder="제품명 (선택사항)"
+                 oninput="onManualChange('${unt.key}')" />
+          <input type="number" id="price-${unt.key}" placeholder="가격 (원)"
+                 min="0" oninput="onManualChange('${unt.key}')" />
+        </div>
+      </div>
+      <div class="comp-price-tag empty" id="price-tag-${unt.key}">미입력</div>
+    </div>
+  `;
+
+  return wrapper;
+}
+
+function onManualChange(key) {
+  const price = parseInt(document.getElementById(`price-${key}`).value || '0');
+  const name  = document.getElementById(`name-${key}`).value.trim();
+  const tag   = document.getElementById(`price-tag-${key}`);
+
+  if (price > 0) {
+    selection[key] = { price, name: name || UNTRACKED.find(u => u.key === key)?.label || key };
+    tag.textContent = fmt(price);
+    tag.className = 'comp-price-tag';
+  } else {
+    delete selection[key];
+    tag.textContent = '미입력';
+    tag.className = 'comp-price-tag empty';
+  }
+  updateSummary();
+}
+
+// ── 요약 패널 ─────────────────────────────────────────────────────────────
+const ALL_COMPS = [
+  { key: 'CPU',         label: 'CPU',   isTracked: true  },
+  { key: 'RAM',         label: 'RAM',   isTracked: true  },
+  { key: 'GPU',         label: 'GPU',   isTracked: true  },
+  { key: 'SSD',         label: 'SSD',   isTracked: true  },
+  { key: 'motherboard', label: '메인보드', isTracked: false },
+  { key: 'cooler',      label: '쿨러',   isTracked: false },
+  { key: 'psu',         label: '파워',   isTracked: false },
+  { key: 'case',        label: '케이스', isTracked: false },
+];
+
+function updateSummary() {
+  const body = document.getElementById('summary-body');
+  let total = 0;
+
+  const rows = ALL_COMPS.map(comp => {
+    const sel = selection[comp.key];
+    let nameText, priceNum, priceText;
+
+    if (comp.isTracked && sel) {
+      const qty = sel.qty || 1;
+      priceNum  = sel.product.min_price ? sel.product.min_price * qty : 0;
+      nameText  = sel.product.name + (qty > 1 ? ` ×${qty}` : '');
+      priceText = priceNum ? fmt(priceNum) : '가격 없음';
+    } else if (!comp.isTracked && sel) {
+      priceNum  = sel.price;
+      nameText  = sel.name;
+      priceText = fmt(priceNum);
+    } else {
+      priceNum  = 0;
+      nameText  = null;
+      priceText = null;
+    }
+
+    total += priceNum || 0;
+
+    return `<div class="summary-item">
+      <span class="si-label">${comp.label}</span>
+      <span class="si-name ${nameText ? '' : 'empty'}">${nameText || '미선택'}</span>
+      <span class="si-price ${priceText ? '' : 'empty'}">${priceText || '-'}</span>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = rows;
+  document.getElementById('total-price').textContent = fmt(total);
+}
+
+// ── 클립보드 복사 ─────────────────────────────────────────────────────────
+function copyQuote() {
+  const dateEl = document.getElementById('update-date');
+  const lines  = [`PC 견적 (${dateEl?.textContent || ''})\n`];
+
+  for (const comp of ALL_COMPS) {
+    const sel = selection[comp.key];
+    if (comp.isTracked && sel) {
+      const qty = sel.qty || 1;
+      const price = sel.product.min_price ? sel.product.min_price * qty : 0;
+      lines.push(`${comp.label.padEnd(6)}: ${sel.product.name}${qty > 1 ? ` ×${qty}` : ''}`);
+      lines.push(`        ${price ? fmt(price) : '가격 미확인'} (${sel.product.cheapest} 최저가)`);
+    } else if (!comp.isTracked && sel) {
+      lines.push(`${comp.label.padEnd(6)}: ${sel.name}`);
+      lines.push(`        ${fmt(sel.price)}`);
+    } else {
+      lines.push(`${comp.label.padEnd(6)}: (미선택)`);
+    }
+  }
+
+  // 총액 계산
+  let total = 0;
+  for (const comp of ALL_COMPS) {
+    const sel = selection[comp.key];
+    if (comp.isTracked && sel && sel.product.min_price) {
+      total += sel.product.min_price * (sel.qty || 1);
+    } else if (!comp.isTracked && sel) {
+      total += sel.price;
+    }
+  }
+  lines.push(`\n총 견적: ${fmt(total)}`);
+
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => showToast('클립보드에 복사되었습니다!'))
+    .catch(() => showToast('복사 실패 — 브라우저 권한을 확인하세요.'));
+}
+
+// ── XSS 방지 ─────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ── 시작 ─────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
