@@ -1,5 +1,5 @@
 {
-  "date": "2026-06-13",
+  "date": "2026-06-14",
   "products": [
     {
       "category": "CPU",
@@ -18,27 +18,27 @@
       "category": "CPU",
       "subcategory": "게이밍 & 작업용 (AMD)",
       "name": "AMD 라이젠7-6세대 9800X3D (그래니트 릿지) (멀티팩 정품)",
-      "danawa_price": 612680,
+      "danawa_price": 612500,
       "danawa_url": "https://prod.danawa.com/info/?pcode=70531547&cate=112747",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1187400",
       "shopdanawa_price": 686990,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=70531547",
       "cheapest": "다나와",
-      "min_price": 612680
+      "min_price": 612500
     },
     {
       "category": "CPU",
       "subcategory": "게이밍 & 작업용 (AMD)",
       "name": "AMD 라이젠7-5세대 7800X3D (라파엘) (멀티팩 정품)",
-      "danawa_price": 402990,
+      "danawa_price": 402680,
       "danawa_url": "https://prod.danawa.com/info/?pcode=19627934&cate=112747",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1013843",
       "shopdanawa_price": 456220,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=19627934",
       "cheapest": "다나와",
-      "min_price": 402990
+      "min_price": 402680
     },
     {
       "category": "CPU",
@@ -83,14 +83,14 @@
       "category": "CPU",
       "subcategory": "메인스트림 (AMD)",
       "name": "AMD 라이젠5-4세대 5600G (세잔) (멀티팩 정품)",
-      "danawa_price": 205380,
+      "danawa_price": 205360,
       "danawa_url": "https://prod.danawa.com/info/?pcode=14927675&cate=112747",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1216681",
       "shopdanawa_price": 226290,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=14927675",
       "cheapest": "다나와",
-      "min_price": 205380
+      "min_price": 205360
     },
     {
       "category": "CPU",
@@ -109,14 +109,14 @@
       "category": "CPU",
       "subcategory": "인텔 울트라",
       "name": "인텔 코어 울트라5 시리즈2 245K (애로우레이크) (정품)",
-      "danawa_price": 340900,
+      "danawa_price": 340890,
       "danawa_url": "https://prod.danawa.com/info/?pcode=69059753&cate=112747",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1183680",
       "shopdanawa_price": 378170,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=69059753",
       "cheapest": "다나와",
-      "min_price": 340900
+      "min_price": 340890
     },
     {
       "category": "CPU",
@@ -239,14 +239,14 @@
       "category": "RAM",
       "subcategory": "DDR4 (16GB)",
       "name": "삼성전자 DDR4-3200 (16GB)",
-      "danawa_price": 180600,
+      "danawa_price": 193310,
       "danawa_url": "https://prod.danawa.com/info/?pcode=11790199",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=681708",
       "shopdanawa_price": 286310,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=11790199",
       "cheapest": "다나와",
-      "min_price": 180600
+      "min_price": 193310
     },
     {
       "category": "RAM",
@@ -304,14 +304,14 @@
       "category": "GPU",
       "subcategory": "RTX 5090",
       "name": "PALIT 지포스 RTX 5090 GAMEROCK D7 32GB 이엠텍",
-      "danawa_price": 7331000,
+      "danawa_price": 7335990,
       "danawa_url": "https://prod.danawa.com/info/?pcode=75376490&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1213365",
       "shopdanawa_price": 7665550,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75376490",
       "cheapest": "다나와",
-      "min_price": 7331000
+      "min_price": 7335990
     },
     {
       "category": "GPU",
@@ -343,27 +343,27 @@
       "category": "GPU",
       "subcategory": "RTX 5080",
       "name": "PALIT 지포스 RTX 5080 GAMINGPRO D7 16GB 이엠텍",
-      "danawa_price": 2054900,
+      "danawa_price": 2052400,
       "danawa_url": "https://prod.danawa.com/info/?pcode=75184250&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1207819",
       "shopdanawa_price": 2158840,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75184250",
       "cheapest": "다나와",
-      "min_price": 2054900
+      "min_price": 2052400
     },
     {
       "category": "GPU",
       "subcategory": "RTX 5080",
       "name": "MSI 지포스 RTX 5080 뱅가드 SOC D7 16GB 하이퍼프로져",
-      "danawa_price": 2203780,
+      "danawa_price": 2200000,
       "danawa_url": "https://prod.danawa.com/info/?pcode=75541700&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1219896",
       "shopdanawa_price": 2371360,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=75541700",
       "cheapest": "다나와",
-      "min_price": 2203780
+      "min_price": 2200000
     },
     {
       "category": "GPU",
@@ -408,27 +408,27 @@
       "category": "GPU",
       "subcategory": "RTX 5070 Ti",
       "name": "MSI 지포스 RTX 5070 Ti 게이밍 트리오 OC D7 16GB 트라이프로져4",
-      "danawa_price": 1590000,
+      "danawa_price": 1580000,
       "danawa_url": "https://prod.danawa.com/info/?pcode=90160715&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1240179",
       "shopdanawa_price": 1692390,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90160715",
       "cheapest": "다나와",
-      "min_price": 1590000
+      "min_price": 1580000
     },
     {
       "category": "GPU",
       "subcategory": "RTX 5070 Ti",
       "name": "이엠텍 지포스 RTX 5070 Ti MIRACLE WHITE D7 16GB",
-      "danawa_price": 1607960,
+      "danawa_price": 1607920,
       "danawa_url": "https://prod.danawa.com/info/?pcode=77020520&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1218402",
       "shopdanawa_price": 1692390,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77020520",
       "cheapest": "다나와",
-      "min_price": 1607960
+      "min_price": 1607920
     },
     {
       "category": "GPU",
@@ -447,14 +447,14 @@
       "category": "GPU",
       "subcategory": "RTX 5070",
       "name": "PALIT 지포스 RTX 5070 INFINITY 3 D7 12GB 이엠텍",
-      "danawa_price": 989000,
+      "danawa_price": 972990,
       "danawa_url": "https://prod.danawa.com/info/?pcode=79402577&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1230077",
       "shopdanawa_price": 1057050,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=79402577",
       "cheapest": "다나와",
-      "min_price": 989000
+      "min_price": 972990
     },
     {
       "category": "GPU",
@@ -486,27 +486,27 @@
       "category": "GPU",
       "subcategory": "RTX 5070",
       "name": "MSI 지포스 RTX 5070 벤투스 2X OC D7 12GB",
-      "danawa_price": 977000,
+      "danawa_price": 969990,
       "danawa_url": "https://prod.danawa.com/info/?pcode=77379452&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1219561",
       "shopdanawa_price": 1043620,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77379452",
       "cheapest": "다나와",
-      "min_price": 977000
+      "min_price": 969990
     },
     {
       "category": "GPU",
       "subcategory": "RTX 5060 Ti",
       "name": "PALIT 지포스 RTX 5060 Ti DUAL D7 8GB 이엠텍",
-      "danawa_price": 607300,
+      "danawa_price": 604090,
       "danawa_url": "https://prod.danawa.com/info/?pcode=89732453&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1237808",
       "shopdanawa_price": 639000,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=89732453",
       "cheapest": "다나와",
-      "min_price": 607300
+      "min_price": 604090
     },
     {
       "category": "GPU",
@@ -551,27 +551,27 @@
       "category": "GPU",
       "subcategory": "RTX 5060",
       "name": "MSI 지포스 RTX 5060 벤투스 2X OC D7 8GB",
-      "danawa_price": 505000,
+      "danawa_price": 504000,
       "danawa_url": "https://prod.danawa.com/info/?pcode=90956033&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1242692",
       "shopdanawa_price": 542510,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90956033",
       "cheapest": "다나와",
-      "min_price": 505000
+      "min_price": 504000
     },
     {
       "category": "GPU",
       "subcategory": "RTX 5060",
       "name": "PALIT 지포스 RTX 5060 DUAL OC D7 8GB 이엠텍",
-      "danawa_price": 510000,
+      "danawa_price": 507000,
       "danawa_url": "https://prod.danawa.com/info/?pcode=90887879&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1242780",
       "shopdanawa_price": 522000,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=90887879",
       "cheapest": "다나와",
-      "min_price": 510000
+      "min_price": 507000
     },
     {
       "category": "GPU",
@@ -616,27 +616,27 @@
       "category": "GPU",
       "subcategory": "RX 9070 XT",
       "name": "SAPPHIRE 라데온 RX 9070 XT NITRO+ OC D6 16GB",
-      "danawa_price": 1309000,
+      "danawa_price": 1299000,
       "danawa_url": "https://prod.danawa.com/info/?pcode=77378093&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1219208",
       "shopdanawa_price": 1450780,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77378093",
       "cheapest": "다나와",
-      "min_price": 1309000
+      "min_price": 1299000
     },
     {
       "category": "GPU",
       "subcategory": "RX 9070 XT",
       "name": "ASUS PRIME 라데온 RX 9070 XT OC D6 16GB 대원씨티에스",
-      "danawa_price": 938943,
+      "danawa_price": 1016610,
       "danawa_url": "https://prod.danawa.com/info/?pcode=77461292&cate=112753",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=1217151",
       "shopdanawa_price": 1071590,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=77461292",
       "cheapest": "다나와",
-      "min_price": 938943
+      "min_price": 1016610
     },
     {
       "category": "GPU",
@@ -772,14 +772,14 @@
       "category": "SSD",
       "subcategory": "상급 1TB",
       "name": "Western Digital WD BLACK SN850X M.2 NVMe (1TB)",
-      "danawa_price": 355990,
+      "danawa_price": 355970,
       "danawa_url": "https://prod.danawa.com/info/?pcode=17788487&cate=11335282",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=953185",
       "shopdanawa_price": 390830,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=17788487",
       "cheapest": "다나와",
-      "min_price": 355990
+      "min_price": 355970
     },
     {
       "category": "SSD",
@@ -837,14 +837,14 @@
       "category": "SSD",
       "subcategory": "중급 1TB",
       "name": "SK하이닉스 Gold P31 M.2 NVMe (1TB)",
-      "danawa_price": 333000,
+      "danawa_price": 339980,
       "danawa_url": "https://prod.danawa.com/info/?pcode=13161338&cate=11335282",
       "compuzone_price": null,
       "compuzone_url": "https://www.compuzone.co.kr/product/product_detail.htm?ProductNo=753914",
       "shopdanawa_price": 357940,
       "shopdanawa_url": "https://shop.danawa.com/main/?controller=goods&methods=blog&billingInternalProductSeq=13161338",
       "cheapest": "다나와",
-      "min_price": 333000
+      "min_price": 339980
     },
     {
       "category": "SSD",
